@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VerPad - Advanced Text Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- CodeMirror Library -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/material-darker.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/meta.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/mode/loadmode.min.js"></script>
+
+    <!-- CodeMirror Addons for New Features -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/fold/foldgutter.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/fold/foldcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/fold/foldgutter.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/fold/brace-fold.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/fold/xml-fold.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/fold/indent-fold.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/fold/comment-fold.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/edit/matchtags.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/selection/active-line.min.js"></script>
+
+    <style>
+        .CodeMirror {
+            font-family: 'Fira Code', 'Consolas', monospace !important;
+            font-size: 14px;
+            height: 100%;
+            background-color: #263238; 
+        }
+        .file-handle { display: none; }
+        .drag-over .CodeMirror { border: 2px dashed #3b82f6 !important; background-color: rgba(59, 130, 246, 0.1) !important; }
+        .modal-overlay { background-color: rgba(0, 0, 0, 0.6); }
+        .modal-content { background-color: #1f2937; }
+        .history-item:hover { background-color: #374151; }
+
+        /* Scroll to Top/Bottom Button */
+        #scrollBtn {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            z-index: 10;
+            width: 2.5rem;
+            height: 2.5rem;
+            background-color: rgba(75, 85, 99, 0.7); /* gray-600 with opacity */
+            border-radius: 9999px;
+            display: none; /* Hidden by default */
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #scrollBtn:hover {
+            background-color: rgba(107, 114, 128, 0.8); /* gray-500 with opacity */
+        }
+        #scrollBtn svg {
+            width: 1.5rem;
+            height: 1.5rem;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col">
+    <div class="bg-gray-800 text-white p-4 shadow-md">
+        <div class="container mx-auto flex flex-wrap items-center justify-between">
+            <h1 class="text-2xl font-bold flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                VerPad
+            </h1>
+            <div class="flex space-x-2">
+                <button id="newBtn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                    New
+                </button>
+                <button id="openBtn" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md flex items-center">
+                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" /></svg>
+                    Open
+                </button>
+                <button id="historyBtn" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    History
+                </button>
+                <button id="saveBtn" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-md flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
+                    Save
+                </button>
+                <button id="saveAsBtn" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-md flex items-center">
+                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    Save As...
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mx-auto p-4 flex-grow flex flex-col">
+        <div class="mb-4 flex items-center">
+            <span id="filename" class="text-lg font-semibold mr-4">Untitled</span>
+            <div class="flex-grow"></div>
+            <select id="languageSelect" class="bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1"></select>
+        </div>
+        
+        <div id="editor-wrapper" class="relative flex-grow border border-gray-300 dark:border-gray-700 rounded-md overflow-hidden bg-gray-800">
+            <div id="editor-container" class="h-full w-full"></div>
+            <!-- Scroll Button will be injected here -->
+        </div>
+
+        <div class="mt-4 text-sm text-gray-500 dark:text-gray-400 flex justify-between items-center">
+            <div>
+                <span id="line-count">1 line</span> <span class="mx-2">|</span>
+                <span id="word-count">0 words</span> <span class="mx-2">|</span>
+                <span id="char-count">0 chars</span>
+            </div>
+            <div><span id="file-status" class="text-blue-500">No changes</span></div>
+        </div>
+    </div>
+
+    <input type="file" id="fileInput" class="file-handle" accept=".*">
+    <div id="historyModal" class="fixed inset-0 z-50 flex items-center justify-center modal-overlay hidden">
+        <div class="modal-content text-white rounded-lg shadow-xl w-full max-w-lg p-6">
+            <h2 class="text-2xl font-bold mb-4">Saved Documents</h2>
+            <div id="history-list" class="max-h-64 overflow-y-auto mb-4 border border-gray-600 rounded"></div>
+            <div class="flex justify-end">
+                 <button id="modalCloseBtn" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-md">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const dom = {
+                editorWrapper: document.getElementById('editor-wrapper'),
+                editorContainer: document.getElementById('editor-container'),
+                filename: document.getElementById('filename'),
+                languageSelect: document.getElementById('languageSelect'),
+                lineCount: document.getElementById('line-count'),
+                wordCount: document.getElementById('word-count'),
+                charCount: document.getElementById('char-count'),
+                fileStatus: document.getElementById('file-status'),
+                newBtn: document.getElementById('newBtn'),
+                openBtn: document.getElementById('openBtn'),
+                historyBtn: document.getElementById('historyBtn'),
+                saveBtn: document.getElementById('saveBtn'),
+                saveAsBtn: document.getElementById('saveAsBtn'),
+                fileInput: document.getElementById('fileInput'),
+                historyModal: document.getElementById('historyModal'),
+                historyList: document.getElementById('history-list'),
+                modalCloseBtn: document.getElementById('modalCloseBtn'),
+            };
+            
+            CodeMirror.modeURL = "https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/%N/%N.min.js";
+            
+            let editor;
+            let state = { currentDocId: null, hasChanges: false, db: null, loading: false };
+            const isFsaSupported = 'showSaveFilePicker' in window;
+
+            const supportedLanguages = [
+                { name: 'Plain Text', mime: 'text/plain' }, { name: 'JavaScript', mime: 'text/javascript' },
+                { name: 'HTML', mime: 'text/html' }, { name: 'CSS', mime: 'text/css' },
+                { name: 'Python', mime: 'text/x-python' }, { name: 'Java', mime: 'text/x-java' },
+                { name: 'C#', mime: 'text/x-csharp' }, { name: 'PHP', mime: 'application/x-httpd-php' },
+                { name: 'SQL', mime: 'text/x-sql' }, { name: 'JSON', mime: 'application/json' },
+                { name: 'XML', mime: 'application/xml' },
+            ];
+
+            function initializeEditor() {
+                supportedLanguages.forEach(lang => {
+                    const option = document.createElement('option');
+                    option.value = lang.mime; option.textContent = lang.name;
+                    dom.languageSelect.appendChild(option);
+                });
+                editor = CodeMirror(dom.editorContainer, {
+                    lineNumbers: true, theme: 'material-darker', mode: 'text/plain', autofocus: true,
+                    styleActiveLine: true,
+                    // New features config
+                    foldGutter: true,
+                    gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+                    matchTags: {bothTags: true},
+                });
+
+                initializeScrollButton();
+
+                editor.on('change', () => {
+                    if (state.loading) return;
+                    state.hasChanges = true; updateFileStatus(); updateStats();
+                });
+                const editorWrapper = editor.getWrapperElement();
+                editorWrapper.addEventListener('dragover', (e) => { e.preventDefault(); editorWrapper.classList.add('drag-over'); });
+                editorWrapper.addEventListener('dragleave', () => editorWrapper.classList.remove('drag-over'));
+                editorWrapper.addEventListener('drop', handleDrop);
+            }
+
+            const DB_NAME = 'VerPadDB_v9';
+            const STORE_NAME = 'documents';
+            // All DB functions (initDB, saveDocumentToDB, etc.) remain the same.
+            async function initDB() { return new Promise((resolve, reject) => { const r = indexedDB.open(DB_NAME, 1); r.onerror = e => reject(e.target.errorCode); r.onsuccess = e => { state.db = e.target.result; resolve(state.db); }; r.onupgradeneeded = e => { const db = e.target.result; if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true }); }; }); }
+            async function saveDocumentToDB(doc) { return new Promise((resolve, reject) => { if (!state.db) return reject("DB not available."); const tx = state.db.transaction(STORE_NAME, 'readwrite'); tx.onerror = e => reject(e.target.error); const s = tx.objectStore(STORE_NAME); const r = s.put(doc); r.onsuccess = () => resolve(r.result); r.onerror = e => reject(e.target.error); }); }
+            async function getDocumentsFromDB() { if (!state.db) return []; const tx = state.db.transaction(STORE_NAME, 'readonly'); return new Promise(resolve => tx.objectStore(STORE_NAME).getAll().onsuccess = e => resolve(e.target.result.sort((a, b) => b.timestamp - a.timestamp))); }
+            async function getDocumentFromDB(id) { if (!state.db) return null; const tx = state.db.transaction(STORE_NAME, 'readonly'); return new Promise(resolve => tx.objectStore(STORE_NAME).get(id).onsuccess = e => resolve(e.target.result)); }
+            async function deleteDocumentFromDB(id) { if (!state.db) return; const tx = state.db.transaction(STORE_NAME, 'readwrite'); await tx.objectStore(STORE_NAME).delete(id); return tx.complete; }
+
+            const updateStats = () => { const t = editor.getValue(), l = editor.lineCount(), w = t.trim() ? t.trim().split(/\s+/).length : 0, c = t.length; dom.lineCount.textContent = `${l} ${l === 1 ? 'line' : 'lines'}`; dom.wordCount.textContent = `${w} ${w === 1 ? 'word' : 'words'}`; dom.charCount.textContent = `${c} ${c === 1 ? 'char' : 'chars'}`; };
+            const updateFileStatus = () => { if (state.hasChanges) { dom.fileStatus.textContent = 'Unsaved changes'; dom.fileStatus.className = 'text-yellow-500'; } else { dom.fileStatus.textContent = state.currentDocId ? 'Saved' : 'No changes'; dom.fileStatus.className = state.currentDocId ? 'text-green-500' : 'text-blue-500'; } };
+            const changeLanguage = () => { const mime = dom.languageSelect.value, info = CodeMirror.findModeByMIME(mime); if (info) { editor.setOption('mode', info.mime); CodeMirror.autoLoadMode(editor, info.mode); } };
+            const loadDocument = (doc, fromFile = false) => { state.loading = true; editor.setValue(doc.content || ''); dom.filename.textContent = doc.name; dom.languageSelect.value = doc.language || 'text/plain'; changeLanguage(); state.currentDocId = fromFile ? null : (doc.id || null); state.hasChanges = false; updateFileStatus(); updateStats(); editor.clearHistory(); editor.focus(); setTimeout(() => { updateScrollButton(); state.loading = false; }, 50); };
+            const newFile = () => { if (state.hasChanges && !confirm('You have unsaved changes. Create new file anyway?')) return; loadDocument({ name: 'Untitled', content: '', language: 'text/plain' }); };
+            const openFromFileSystem = () => { if (state.hasChanges && !confirm('You have unsaved changes. Open a file anyway?')) return; dom.fileInput.click(); };
+            const handleFileSelect = async (e) => { const f = e.target.files[0]; if (!f) return; try { const c = await f.text(), i = CodeMirror.findModeByFileName(f.name); loadDocument({ name: f.name, content: c, language: i ? i.mime : 'text/plain' }, true); } catch (err) { alert('Error reading file.'); } finally { dom.fileInput.value = ''; } };
+            const saveFile = async () => { if (dom.filename.textContent === 'Untitled' && state.currentDocId === null) { const newName = prompt("Please enter a name for this document:", "Untitled.txt"); if (!newName) return; dom.filename.textContent = newName; } const doc = { name: dom.filename.textContent, content: editor.getValue(), language: dom.languageSelect.value, timestamp: Date.now() }; if (state.currentDocId) { doc.id = state.currentDocId; } try { const savedId = await saveDocumentToDB(doc); state.currentDocId = savedId; state.hasChanges = false; updateFileStatus(); } catch (e) { console.error("Save failed:", e); alert(`Error: Could not save the document. ${e}`); } };
+            const saveFileAs = async () => { const content = editor.getValue(), filename = dom.filename.textContent; if (isFsaSupported) { try { const handle = await window.showSaveFilePicker({ suggestedName: filename }); const writable = await handle.createWritable(); await writable.write(content); await writable.close(); } catch (e) { if (e.name !== 'AbortError') console.error("FSA save error:", e); } } else { try { const blob = new Blob([content], { type: 'text/plain;charset=utf-8' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); } catch (e) { console.error("Fallback save error:", e); alert("Could not save the file."); } } };
+            const handleDrop = async (e) => { e.preventDefault(); e.stopPropagation(); editor.getWrapperElement().classList.remove('drag-over'); if (state.hasChanges && !confirm('You have unsaved changes. Open dropped file anyway?')) return; const file = e.dataTransfer.files[0]; if (file) handleFileSelect({ target: { files: [file] } }); };
+            const showHistoryModal = async () => { const docs = await getDocumentsFromDB(); dom.historyList.innerHTML = ''; if (docs.length === 0) { dom.historyList.innerHTML = '<div class="p-4 text-gray-400">No saved documents.</div>'; } else { docs.forEach(doc => { const item = document.createElement('div'); item.className = 'history-item flex justify-between items-center p-3 cursor-pointer border-b border-gray-700 last:border-b-0'; item.innerHTML = `<div><div class="font-semibold">${doc.name}</div><div class="text-xs text-gray-400">Saved: ${new Date(doc.timestamp).toLocaleString()}</div></div><button data-id="${doc.id}" class="remove-btn text-red-500 hover:text-red-400 text-xl font-bold px-2">×</button>`; item.addEventListener('click', async () => { if (state.hasChanges && !confirm('Unsaved changes will be lost. Open anyway?')) return; const fullDoc = await getDocumentFromDB(doc.id); if (fullDoc) { loadDocument(fullDoc); hideHistoryModal(); } }); item.querySelector('.remove-btn').addEventListener('click', async (e) => { e.stopPropagation(); if (confirm(`Delete "${doc.name}"?`)) { await deleteDocumentFromDB(doc.id); if (state.currentDocId === doc.id) newFile(); showHistoryModal(); } }); dom.historyList.appendChild(item); }); } dom.historyModal.classList.remove('hidden'); };
+            const hideHistoryModal = () => dom.historyModal.classList.add('hidden');
+            
+            // --- Scroll Button Logic ---
+            let scrollBtn, scrollArrowUp, scrollArrowDown;
+            function initializeScrollButton() {
+                scrollBtn = document.createElement('button');
+                scrollBtn.id = 'scrollBtn';
+                scrollBtn.innerHTML = `
+                    <svg id="scrollArrowUp" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" /></svg>
+                    <svg id="scrollArrowDown" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="display: none;"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
+                `;
+                dom.editorWrapper.appendChild(scrollBtn);
+                scrollArrowUp = document.getElementById('scrollArrowUp');
+                scrollArrowDown = document.getElementById('scrollArrowDown');
+
+                scrollBtn.addEventListener('click', () => {
+                    const scrollInfo = editor.getScrollInfo();
+                    if (scrollInfo.top < 10) { editor.scrollTo(null, scrollInfo.height); } 
+                    else { editor.scrollTo(0, 0); }
+                });
+
+                editor.on('scroll', updateScrollButton);
+                editor.on('update', updateScrollButton); // Also check on content update
+            }
+
+            function updateScrollButton() {
+                if (!editor) return;
+                const scrollInfo = editor.getScrollInfo();
+                const canScroll = scrollInfo.height > scrollInfo.clientHeight;
+                
+                if (canScroll) {
+                    scrollBtn.style.display = 'flex';
+                    if (scrollInfo.top < 10) {
+                        scrollArrowUp.style.display = 'none';
+                        scrollArrowDown.style.display = 'block';
+                    } else {
+                        scrollArrowUp.style.display = 'block';
+                        scrollArrowDown.style.display = 'none';
+                    }
+                } else {
+                    scrollBtn.style.display = 'none';
+                }
+            }
+            
+            dom.languageSelect.addEventListener('change', changeLanguage);
+            dom.newBtn.addEventListener('click', newFile); dom.openBtn.addEventListener('click', openFromFileSystem);
+            dom.historyBtn.addEventListener('click', showHistoryModal); dom.saveBtn.addEventListener('click', saveFile);
+            dom.saveAsBtn.addEventListener('click', saveFileAs); dom.modalCloseBtn.addEventListener('click', hideHistoryModal);
+            dom.fileInput.addEventListener('change', handleFileSelect);
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !dom.historyModal.classList.contains('hidden')) { hideHistoryModal(); }
+                if (e.ctrlKey || e.metaKey) {
+                    const key = e.key.toLowerCase();
+                    if (['n', 'o', 's'].includes(key)) e.preventDefault();
+                    if (key === 'n') newFile(); if (key === 'o') openFromFileSystem();
+                    if (key === 's') e.shiftKey ? saveFileAs() : saveFile();
+                }
+            });
+            
+            async function main() {
+                initializeEditor();
+                try { await initDB(); } catch (e) { alert(`Critical Error: Could not enable document saving. ${e}`); }
+                newFile();
+            }
+            main();
+        });
+    </script>
+</body>
+</html>
