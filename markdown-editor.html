@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced AI Writing Pad & Code Editor</title>
+
+    <!-- CodeMirror CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/material-darker.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/theme/eclipse.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/fold/foldgutter.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/lint/lint.min.css">
+
+
+    <style>
+        :root {
+            --font-family-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            --font-family-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f7f7f7;
+            --text-primary: #1a1a1a;
+            --text-secondary: #5c5c5c;
+            --border-color: #e0e0e0;
+            --accent-color: #007bff;
+            --accent-color-hover: #0056b3;
+            --error-color: #dc3545;
+            --padding-xs: 4px;
+            --padding-s: 8px;
+            --padding-m: 16px;
+            --padding-l: 24px;
+            --border-radius: 6px;
+            --transition-speed: 0.3s;
+            --resizer-width: 8px;
+            --tab-height: 40px;
+            --button-secondary-bg: #6c757d;
+            --button-secondary-hover-bg: #5a6268;
+        }
+
+        body.dark-mode {
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #2a2a2a;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --border-color: #444444;
+            --accent-color: #4dabf7;
+            --accent-color-hover: #2c8ce8;
+            --button-secondary-bg: #52585d;
+            --button-secondary-hover-bg: #404549;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        body {
+            font-family: var(--font-family-sans);
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease;
+        }
+
+        .app-header {
+            display: flex;
+            align-items: center;
+            padding: var(--padding-s) var(--padding-m);
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            height: var(--tab-height); /* Adjust if needed due to more buttons */
+            flex-wrap: wrap; /* Allow wrapping for more buttons */
+            flex-shrink: 0;
+        }
+
+        .tabs button {
+            background-color: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: var(--padding-s) var(--padding-m);
+            cursor: pointer;
+            font-size: 0.9em;
+            border-bottom: 2px solid transparent;
+            margin-right: var(--padding-s);
+            transition: color var(--transition-speed), border-bottom-color var(--transition-speed);
+        }
+
+        .tabs button.active {
+            color: var(--accent-color);
+            border-bottom-color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        .tabs button:hover:not(.active) {
+            color: var(--text-primary);
+        }
+
+        .container {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        .pane {
+            /* Padding removed here, CodeMirror will handle its internal padding */
+            overflow: auto;
+            height: 100%;
+            transition: background-color var(--transition-speed) ease;
+            flex-basis: 50%;
+            flex-grow: 0;
+            flex-shrink: 0;
+            display: flex; /* To make CodeMirror instance take full height */
+            flex-direction: column; /* For CodeMirror wrapper */
+        }
+        
+        .editor-pane {
+            background-color: var(--bg-secondary); /* Will be covered by CodeMirror theme mostly */
+        }
+
+        /* CodeMirror specific styling */
+        .CodeMirror {
+            height: 100% !important; /* Ensure CodeMirror fills the pane */
+            font-family: var(--font-family-mono);
+            font-size: 0.95rem; /* Adjust as desired */
+            line-height: 1.5;
+            flex-grow: 1; /* Makes CodeMirror fill editor-pane */
+        }
+         /* Ensure CodeMirror scrollbars use theme colors */
+        .cm-s-default .CodeMirror-scrollbar-thumb,
+        .cm-s-eclipse .CodeMirror-scrollbar-thumb {
+            background-color: var(--border-color) !important;
+        }
+        .cm-s-default .CodeMirror-scrollbar-track,
+        .cm-s-eclipse .CodeMirror-scrollbar-track {
+            background-color: var(--bg-secondary) !important;
+        }
+        .cm-s-material-darker .CodeMirror-scrollbar-thumb {
+            background-color: var(--border-color) !important; /* Dark theme scroll thumb */
+        }
+        .cm-s-material-darker .CodeMirror-scrollbar-track {
+            background-color: var(--bg-secondary) !important; /* Dark theme scroll track */
+        }
+
+
+        .preview-pane-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            flex-basis: 50%;
+        }
+
+        .preview-tabs {
+            display: flex;
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        .preview-tabs button {
+            background-color: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: var(--padding-s);
+            cursor: pointer;
+            font-size: 0.85em;
+            border-bottom: 2px solid transparent;
+            margin-right: var(--padding-xs);
+            transition: color var(--transition-speed), border-bottom-color var(--transition-speed);
+        }
+
+        .preview-tabs button.active {
+            color: var(--accent-color);
+            border-bottom-color: var(--accent-color);
+            font-weight: 500;
+        }
+
+        .preview-content-area {
+            flex-grow: 1;
+            overflow: auto;
+            padding: var(--padding-m); /* Add padding here for preview content */
+        }
+         .preview-content-area::-webkit-scrollbar {
+            width: 8px;
+        }
+        .preview-content-area::-webkit-scrollbar-thumb {
+            background-color: var(--border-color);
+            border-radius: var(--border-radius);
+        }
+        .preview-content-area::-webkit-scrollbar-track {
+            background-color: var(--bg-secondary);
+        }
+
+
+        .preview-pane,
+        #codeExecutionFrame {
+            background-color: var(--bg-primary);
+            height: 100%;
+            width: 100%;
+            /* Padding removed, applied to preview-content-area */
+            display: none;
+        }
+
+        .preview-pane.active,
+        #codeExecutionFrame.active {
+            display: block;
+        }
+
+        #codeExecutionFrame {
+            border: none;
+        }
+
+
+        .resizer {
+            width: var(--resizer-width);
+            background-color: var(--border-color);
+            cursor: col-resize;
+            flex-shrink: 0;
+            height: 100%;
+            transition: background-color var(--transition-speed) ease;
+        }
+
+        .resizer:hover {
+            background-color: var(--accent-color);
+        }
+
+        /* Markdown Styles (Keep your preferred ones) */
+        .preview-pane h1,
+        .preview-pane h2,
+        .preview-pane h3 {
+            margin-top: var(--padding-m);
+            margin-bottom: var(--padding-s);
+            font-weight: 600;
+        }
+
+        .preview-pane h1 {
+            font-size: 2em;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: var(--padding-s);
+        }
+
+        .preview-pane h2 {
+            font-size: 1.75em;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: var(--padding-s);
+        }
+
+        .preview-pane h3 {
+            font-size: 1.5em;
+        }
+
+        .preview-pane p {
+            margin-bottom: var(--padding-m);
+        }
+
+        .preview-pane ul,
+        .preview-pane ol {
+            margin-left: var(--padding-l);
+            margin-bottom: var(--padding-m);
+        }
+
+        .preview-pane li {
+            margin-bottom: var(--padding-xs);
+        }
+
+        .preview-pane blockquote {
+            border-left: 4px solid var(--border-color);
+            padding-left: var(--padding-m);
+            margin: var(--padding-m) 0;
+            color: var(--text-secondary);
+            background-color: var(--bg-secondary);
+            border-radius: var(--border-radius);
+        }
+
+        .preview-pane code { /* Inline code in preview */
+            background-color: var(--bg-secondary);
+            color: var(--accent-color); /* Or a different color to distinguish from editor */
+            padding: 2px 5px;
+            border-radius: var(--border-radius);
+            font-family: var(--font-family-mono);
+            font-size: 0.9em;
+        }
+
+        .preview-pane pre { /* Code blocks in preview */
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: var(--padding-m);
+            overflow-x: auto;
+            margin-bottom: var(--padding-m);
+        }
+
+        .preview-pane pre code { /* Code inside pre in preview */
+            background-color: transparent;
+            padding: 0;
+            color: var(--text-primary); /* Or themed color */
+            font-size: 0.9em;
+            white-space: pre; /* Keep pre formatting for code blocks */
+        }
+
+        .preview-pane a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        .preview-pane a:hover {
+            text-decoration: underline;
+        }
+
+        .preview-pane img {
+            max-width: 100%;
+            height: auto;
+            border-radius: var(--border-radius);
+            display: block;
+        }
+
+        .preview-pane del {
+            color: var(--text-secondary);
+        }
+
+        .preview-pane hr {
+            border: 0;
+            height: 1px;
+            background-color: var(--border-color);
+            margin: var(--padding-l) 0;
+        }
+
+        /* Controls Bar */
+        .controls-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--padding-s) var(--padding-m);
+            background-color: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            height: 50px;
+            flex-shrink: 0;
+        }
+
+        .stats span {
+            margin-right: var(--padding-m);
+            font-size: 0.85em;
+            color: var(--text-secondary);
+        }
+        .stats span:last-child {
+            margin-right: 0;
+        }
+
+        .editor-actions button { /* Specific class for editor action buttons */
+            background-color: var(--button-secondary-bg);
+            color: white;
+            border: none;
+            padding: var(--padding-xs) var(--padding-s);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 0.85em;
+            margin-left: var(--padding-s);
+            transition: background-color var(--transition-speed) ease, transform 0.1s ease;
+        }
+        .editor-actions button:hover {
+            background-color: var(--button-secondary-hover-bg);
+            transform: translateY(-1px);
+        }
+
+
+        .file-actions button,
+        .app-header .actions button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: var(--padding-s) var(--padding-m);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-left: var(--padding-s);
+            transition: background-color var(--transition-speed) ease, transform 0.1s ease;
+        }
+
+        .file-actions button:hover,
+        .app-header .actions button:hover {
+            background-color: var(--accent-color-hover);
+            transform: translateY(-1px);
+        }
+
+        .app-header .actions {
+            margin-left: auto; /* Pushes theme toggle to the right */
+        }
+        .file-actions {
+            margin-left: var(--padding-m); /* Spacing after tabs */
+        }
+
+
+        input[type="file"] {
+            display: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .app-header {
+                height: auto;
+                /* flex-direction: column; Keep as row, let wrap handle it */
+                /* align-items: flex-start; */
+            }
+            .app-header .tabs, .app-header .file-actions, .app-header .actions {
+                margin-bottom: var(--padding-s); /* Add spacing when wrapped */
+            }
+            .app-header .actions { margin-left: 0; width: 100%; text-align: right; } /* Theme toggle on new line */
+            .file-actions { margin-left: 0; }
+
+
+            .container {
+                flex-direction: column;
+            }
+
+            .resizer {
+                display: none;
+            }
+
+            .pane,
+            .preview-pane-wrapper {
+                flex-basis: auto !important;
+                width: 100% !important;
+                height: 50vh !important; /* Use vh for better distribution */
+                flex-grow: 1;
+                flex-shrink: 1;
+            }
+
+            .editor-pane {
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            .controls-bar {
+                flex-direction: column;
+                height: auto;
+                padding: var(--padding-m);
+            }
+            .controls-bar .stats, .controls-bar .editor-actions, .controls-bar .mode-display-wrapper {
+                width: 100%;
+                text-align: center;
+                margin-bottom: var(--padding-s);
+            }
+            .controls-bar .editor-actions button {
+                margin-left: var(--padding-xs);
+                margin-right: var(--padding-xs);
+            }
+            .controls-bar > div:last-child { margin-bottom: 0; }
+
+        }
+    </style>
+    <!-- <link rel="stylesheet" href="styles/hstyles.css"> --> <!-- Assuming this is for the commented nav -->
+</head>
+
+<body>
+    <header class="app-header">
+        <div class="tabs">
+            <button id="tabMarkdown" class="active">Markdown</button>
+            <button id="tabCode">Code (HTML/CSS/JS)</button>
+        </div>
+        <div class="file-actions">
+            <input type="file" id="fileInput" accept=".md,.txt,.html,.js,.css">
+            <button id="openFileButton">📂 Open</button>
+            <button id="saveFileButton">💾 Save</button>
+        </div>
+        <div class="actions"> <!-- For global actions like theme toggle -->
+            <button id="themeToggle">🌙 Dark Mode</button>
+        </div>
+    </header>
+
+    <div class="container" id="mainContainer">
+        <div id="editorPane" class="pane editor-pane">
+            <!-- CodeMirror will be initialized here by JavaScript -->
+            <!-- Removed: <textarea id="markdownInput" placeholder="Type Markdown or Code here..."></textarea> -->
+        </div>
+        <div class="resizer" id="resizer"></div>
+        <div id="previewWrapper" class="preview-pane-wrapper">
+            <div class="preview-tabs">
+                <button id="previewTabMarkdown" class="active">Preview</button>
+                <button id="previewTabRunCode">Run HTML/JS</button>
+            </div>
+            <div class="preview-content-area">
+                <div id="markdownPreviewPane" class="preview-pane active">
+                    <!-- Markdown HTML will appear here -->
+                </div>
+                <iframe id="codeExecutionFrame" sandbox="allow-scripts allow-same-origin"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls-bar">
+        <div class="stats">
+            <span>Chars: <span id="charCount">0</span></span>
+            <span>Words: <span id="wordCount">0</span></span>
+            <span><span id="lineColDisplay">Ln 1, Col 1</span></span>
+        </div>
+        <div class="editor-actions">
+            <button id="copyCodeButton" title="Copy editor content to clipboard">📋 Copy Code</button>
+            <button id="clearEditorButton" title="Clear editor content">Clear</button>
+        </div>
+        <div class="mode-display-wrapper"> <!-- Wrapper for better layout control -->
+           <span>Editing: <span id="currentModeDisplay">Markdown</span></span>
+        </div>
+    </div>
+
+    <!-- CodeMirror JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
+    <!-- Modes -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/markdown/markdown.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/htmlmixed/htmlmixed.min.js"></script>
+    <!-- Addons -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/edit/closetag.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/fold/foldcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/fold/foldgutter.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/fold/brace-fold.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/fold/xml-fold.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/fold/markdown-fold.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/fold/comment-fold.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/selection/active-line.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/addon/lint/lint.min.js"></script>
+    <!-- Potentially add linters for JS/CSS/HTML if desired, e.g., jshint.js, csslint.js -->
+
+
+    <script src="Scripts/mdscript1.js"></script>
+    <!-- <script src="scripts/hscript.js"></script> --> <!-- Assuming this is for the commented nav -->
+</body>
+</html>
