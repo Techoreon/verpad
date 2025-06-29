@@ -17,13 +17,14 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
-            background-color: #f5f5f5;
             overflow: hidden;
         }
 
+        /* --- THEME STYLES --- */
+        body.dark-theme { background-color: #1e1e1e; color: #d4d4d4; }
+        body.light-theme { background-color: #f5f5f5; color: #333; }
+
         header {
-            background-color: #1e1e1e;
-            color: white;
             padding: 15px 20px;
             display: flex;
             justify-content: space-between;
@@ -31,43 +32,20 @@
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
             z-index: 10;
         }
+        body.dark-theme header { background-color: #1e1e1e; color: white; }
+        body.light-theme header { background-color: #ffffff; color: #333; border-bottom: 1px solid #ddd; }
 
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
 
-        .logo img {
-            height: 30px;
-            width: auto;
-        }
+        .logo { display: flex; align-items: center; gap: 10px; }
+        .logo img { height: 30px; width: auto; }
+        .logo h1 { font-size: 1.5rem; font-weight: 600; }
 
-        .logo h1 {
-            font-size: 1.5rem;
-            font-weight: 600;
-        }
-
-        .controls {
-            display: flex;
-            gap: 10px;
-        }
-
+        .controls { display: flex; gap: 10px; }
         button {
-            padding: 8px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 5px;
+            padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer;
+            font-weight: 500; transition: all 0.2s; display: flex; align-items: center; gap: 5px;
         }
-
-        button:hover {
-            opacity: 0.9;
-        }
+        button:hover { opacity: 0.9; }
 
         .run-btn { background-color: #4CAF50; color: white; }
         .clear-btn { background-color: #f44336; color: white; }
@@ -76,18 +54,9 @@
         .load-btn { background-color: #9C27B0; color: white; }
         .theme-btn { background-color: #607D8B; color: white; }
 
-        main {
-            display: flex;
-            flex-grow: 1;
-            overflow: hidden;
-        }
+        main { display: flex; flex-grow: 1; overflow: hidden; }
 
-        .editor-container {
-            flex: 1;
-            position: relative;
-            border-right: 1px solid #ddd;
-        }
-
+        .editor-container { flex: 1; position: relative; border-right: 1px solid #ddd; }
         #editor { width: 100%; height: 100%; }
 
         .output-container {
@@ -95,50 +64,25 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            background-color: white;
         }
 
-        .output-tabs {
-            display: flex;
-            background-color: #f0f0f0;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .tab {
+        /* REMOVED: Tab styling, REPLACED with simple header */
+        .output-header {
             padding: 10px 15px;
-            cursor: pointer;
-            border-right: 1px solid #ddd;
-            position: relative;
-        }
-
-        .tab.active {
-            background-color: white;
             font-weight: 500;
+            border-bottom: 1px solid #333;
         }
+        body.dark-theme .output-header { background-color: #252526; border-bottom-color: #333; color: #ccc; }
+        body.light-theme .output-header { background-color: #f0f0f0; border-bottom-color: #ddd; color: #333; }
 
-        .tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: -1px;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background-color: #2196F3;
-        }
 
         .output-content {
             flex-grow: 1;
             overflow: auto;
             padding: 15px;
-            background-color: white;
         }
-
-        #output-frame {
-            width: 100%;
-            height: 100%;
-            border: none;
-            background-color: white;
-        }
+        body.dark-theme .output-content { background-color: #1e1e1e; }
+        body.light-theme .output-content { background-color: white; }
 
         #console-output {
             font-family: 'Consolas', 'Monaco', monospace;
@@ -147,20 +91,21 @@
             line-height: 1.5;
         }
 
-        .console-message { margin-bottom: 5px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .console-log { color: #333; }
+        .console-message { margin-bottom: 5px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        body.light-theme .console-message { border-bottom-color: #eee; }
+
+        /* Tweaked colors for dark/light themes */
+        body.dark-theme .console-log { color: #d4d4d4; }
+        body.light-theme .console-log { color: #333; }
         .console-error { color: #f44336; font-weight: bold; }
         .console-warn { color: #FF9800; }
         .console-info { color: #2196F3; }
 
         footer {
-            background-color: #1e1e1e;
-            color: #aaa;
-            padding: 10px;
-            font-size: 12px;
-            text-align: center;
-            border-top: 1px solid #333;
+            padding: 10px; font-size: 12px; text-align: center;
         }
+        body.dark-theme footer { background-color: #1e1e1e; color: #aaa; border-top: 1px solid #333; }
+        body.light-theme footer { background-color: #f0f0f0; color: #666; border-top: 1px solid #ddd; }
 
         .status-bar { display: flex; justify-content: space-between; }
 
@@ -170,12 +115,6 @@
             .controls { flex-wrap: wrap; }
         }
 
-        .collapsible { margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
-        .collapsible-header { background-color: #f5f5f5; padding: 10px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 500; }
-        .collapsible-header:hover { background-color: #eee; }
-        .collapsible-content { padding: 15px; background-color: white; border-top: 1px solid #ddd; max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
-
-        /* Tooltip */
         .tooltip { position: relative; display: inline-block; }
         .tooltip .tooltiptext {
             visibility: hidden; width: 200px; background-color: #333; color: #fff; text-align: center;
@@ -185,20 +124,20 @@
         .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
     </style>
 </head>
-<body>
+<!-- Set initial theme -->
+<body class="dark-theme">
     <header>
         <div class="logo">
             <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/7a222dfa-7d0d-49c9-8da9-5fcbdbe0cfdf.png" alt="JS Compiler logo" />
             <h1>Advanced JS Compiler</h1>
         </div>
         <div class="controls">
-            <!-- FIX: Corrected tooltip structure -->
             <button class="run-btn tooltip" id="runBtn">Run (Ctrl+Enter)<span class="tooltiptext">Execute the current code</span></button>
-            <button class="clear-btn tooltip" id="clearBtn">Clear<span class="tooltiptext">Clear the output</span></button>
-            <button class="format-btn tooltip" id="formatBtn">Format<span class="tooltiptext">Format the code with proper indentation</span></button>
+            <button class="clear-btn tooltip" id="clearBtn">Clear<span class="tooltiptext">Clear the console</span></button>
+            <button class="format-btn tooltip" id="formatBtn">Format<span class="tooltiptext">Format the code</span></button>
             <button class="save-btn tooltip" id="saveBtn">Save<span class="tooltiptext">Save code to local storage</span></button>
-            <button class="load-btn tooltip" id="loadBtn">Load<span class="tooltiptext">Load saved code from local storage</span></button>
-            <button class="theme-btn tooltip" id="themeBtn">Theme<span class="tooltiptext">Toggle between light and dark theme</span></button>
+            <button class="load-btn tooltip" id="loadBtn">Load<span class="tooltiptext">Load saved code</span></button>
+            <button class="theme-btn tooltip" id="themeBtn">Theme<span class="tooltiptext">Toggle light/dark theme</span></button>
         </div>
     </header>
 
@@ -207,19 +146,11 @@
             <div id="editor"></div>
         </div>
         <div class="output-container">
-            <div class="output-tabs">
-                <div class="tab active" data-tab="result">Result</div>
-                <div class="tab" data-tab="console">Console</div>
-                <div class="tab" data-tab="docs">Docs</div>
-            </div>
+            <!-- REMOVED: Tab container, REPLACED with static header -->
+            <div class="output-header">Console</div>
             <div class="output-content" id="output-content">
-                <iframe id="output-frame"></iframe>
-                <div id="console-output" style="display: none;"></div>
-                <div id="docs-content" style="display: none;">
-                    <div class="collapsible"><div class="collapsible-header">JavaScript Basics</div><div class="collapsible-content"><h3>Variables</h3><p><code>let x = 5;</code></p><p><code>const PI = 3.14;</code></p></div></div>
-                    <div class="collapsible"><div class="collapsible-header">Functions</div><div class="collapsible-content"><h3>Function Declaration</h3><p><code>function greet(name) { return `Hello ${name}`; }</code></p></div></div>
-                    <div class="collapsible"><div class="collapsible-header">Arrays</div><div class="collapsible-content"><h3>Common Methods</h3><p><code>[1, 2, 3].map(x => x * 2);</code></p><p><code>[1, 2, 3].filter(x => x > 1);</code></p></div></div>
-                </div>
+                <!-- REMOVED: iframe and docs content. Only console remains -->
+                <div id="console-output"></div>
             </div>
         </div>
     </main>
@@ -239,16 +170,7 @@
             monaco.editor.defineTheme('vs-light-custom', { base: 'vs', inherit: true, rules: [], colors: { 'editor.background': '#ffffff' }});
 
             const editor = monaco.editor.create(document.getElementById('editor'), {
-                value: localStorage.getItem('jsCompilerCode') || `// Welcome to the Advanced JS Compiler!
-console.log("Hello from the console!");
-
-const p = document.createElement('p');
-p.textContent = 'This is the visual output.';
-document.body.appendChild(p);
-
-// Try creating an error
-// testError();
-`,
+                value: localStorage.getItem('jsCompilerCode') || `console.log("Hello from the console!");\nconsole.log({ a: 1, b: "test" });\n\n// Try creating an error\n// testError();`,
                 language: 'javascript',
                 theme: 'vs-dark-custom',
                 automaticLayout: true,
@@ -261,29 +183,19 @@ document.body.appendChild(p);
             const saveBtn = document.getElementById('saveBtn');
             const loadBtn = document.getElementById('loadBtn');
             const themeBtn = document.getElementById('themeBtn');
-            const outputFrame = document.getElementById('output-frame');
             const consoleOutput = document.getElementById('console-output');
-            const docsContent = document.getElementById('docs-content');
-            const tabs = document.querySelectorAll('.tab');
             const statusLine = document.getElementById('status-line');
             const statusTheme = document.getElementById('status-theme');
-            const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
             
-            // This function adds messages to our custom console div
             function appendToConsole(type, args) {
                 const message = document.createElement('div');
                 message.className = `console-message console-${type}`;
                 
                 const formattedArgs = args.map(arg => {
-                    if (arg instanceof Error) {
-                        return arg.stack || arg.toString();
-                    }
+                    if (arg instanceof Error) return arg.stack || arg.toString();
                     if (typeof arg === 'object' && arg !== null) {
-                        try {
-                            return JSON.stringify(arg, null, 2);
-                        } catch (e) {
-                            return String(arg);
-                        }
+                        try { return JSON.stringify(arg, null, 2); }
+                        catch (e) { return String(arg); }
                     }
                     return String(arg);
                 }).join(' ');
@@ -293,8 +205,6 @@ document.body.appendChild(p);
                 consoleOutput.scrollTop = consoleOutput.scrollHeight;
             }
             
-            // Override the main window's console methods to use our custom logger
-            // This is what the iframe will call into
             window.console.log = (...args) => appendToConsole('log', args);
             window.console.error = (...args) => appendToConsole('error', args);
             window.console.warn = (...args) => appendToConsole('warn', args);
@@ -304,46 +214,35 @@ document.body.appendChild(p);
                 consoleOutput.innerHTML = '';
             }
             
-            // FIX: This is the critical change.
-            // It runs the code by creating an HTML document for the iframe,
-            // which includes a "bridge" script to forward console messages.
             function runCode() {
                 const code = editor.getValue();
                 clearConsole();
                 
-                const fullCode = `
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <style> body { font-family: sans-serif; color: #333; } </style>
-                    </head>
-                    <body>
-                        <script>
-                            // 1. Bridge: Redirect this iframe's console to the parent window's console.
-                            const parentConsole = window.parent.console;
-                            Object.keys(parentConsole).forEach(key => {
-                                if (typeof parentConsole[key] === 'function') {
-                                    console[key] = (...args) => parentConsole[key](...args);
-                                }
-                            });
+                // An invisible iframe is still used to isolate the code execution
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                document.body.appendChild(iframe);
 
-                            // 2. Bridge: Catch runtime errors and send them to the parent console.
-                            window.addEventListener('error', e => {
-                                console.error(e.error);
-                            });
+                const iWindow = iframe.contentWindow;
+                const iDoc = iWindow.document;
 
-                            // 3. Execute the user's code within a try/catch block.
-                            try {
-                                ${code}
-                            } catch (err) {
-                                console.error(err);
-                            }
-                        <\/script>
-                    </body>
-                    </html>
-                `;
-                
-                outputFrame.srcdoc = fullCode;
+                // Create the bridge for console and errors
+                iWindow.console = window.console;
+                iWindow.addEventListener('error', e => {
+                    console.error(e.error || e.message);
+                });
+
+                // Execute the code
+                try {
+                    const script = iDoc.createElement('script');
+                    script.textContent = code;
+                    iDoc.body.appendChild(script);
+                } catch (err) {
+                    console.error(err);
+                }
+
+                // Clean up the iframe
+                document.body.removeChild(iframe);
             }
             
             async function formatCode() {
@@ -365,46 +264,26 @@ document.body.appendChild(p);
             }
             
             function toggleTheme() {
-                const currentTheme = editor.getOption(monaco.editor.EditorOption.theme);
-                if (currentTheme === 'vs-dark-custom') {
+                const isDark = document.body.classList.contains('dark-theme');
+                if (isDark) {
                     monaco.editor.setTheme('vs-light-custom');
-                    document.body.style.backgroundColor = '#f5f5f5';
+                    document.body.classList.remove('dark-theme');
+                    document.body.classList.add('light-theme');
                     statusTheme.textContent = 'Light Theme';
                 } else {
                     monaco.editor.setTheme('vs-dark-custom');
-                    document.body.style.backgroundColor = '#1e1e1e';
+                    document.body.classList.remove('light-theme');
+                    document.body.classList.add('dark-theme');
                     statusTheme.textContent = 'Dark Theme';
                 }
             }
             
-            function switchTab(tabName) {
-                tabs.forEach(tab => tab.classList.toggle('active', tab.dataset.tab === tabName));
-                outputFrame.style.display = (tabName === 'result') ? 'block' : 'none';
-                consoleOutput.style.display = (tabName === 'console') ? 'block' : 'none';
-                docsContent.style.display = (tabName === 'docs') ? 'block' : 'none';
-            }
-            
-            collapsibleHeaders.forEach(header => {
-                header.addEventListener('click', () => {
-                    const content = header.nextElementSibling;
-                    if (content.style.maxHeight) {
-                        content.style.maxHeight = null;
-                    } else {
-                        content.style.maxHeight = content.scrollHeight + 'px';
-                    }
-                });
-            });
-            
             runBtn.addEventListener('click', runCode);
-            clearBtn.addEventListener('click', () => {
-                outputFrame.srcdoc = '';
-                clearConsole();
-            });
+            clearBtn.addEventListener('click', clearConsole);
             formatBtn.addEventListener('click', formatCode);
             saveBtn.addEventListener('click', saveCode);
             loadBtn.addEventListener('click', loadCode);
             themeBtn.addEventListener('click', toggleTheme);
-            tabs.forEach(tab => tab.addEventListener('click', () => switchTab(tab.dataset.tab)));
             
             document.addEventListener('keydown', (e) => {
                 if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
