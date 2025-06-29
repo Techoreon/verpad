@@ -10,7 +10,8 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* CHANGE: Set a monospace font for the entire UI */
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
         }
 
         body {
@@ -65,8 +66,7 @@
             flex-direction: column;
             overflow: hidden;
         }
-
-        /* REMOVED: Tab styling, REPLACED with simple header */
+        
         .output-header {
             padding: 10px 15px;
             font-weight: 500;
@@ -85,7 +85,7 @@
         body.light-theme .output-content { background-color: white; }
 
         #console-output {
-            font-family: 'Consolas', 'Monaco', monospace;
+            /* This already uses a monospace font, which is good */
             white-space: pre-wrap;
             font-size: 14px;
             line-height: 1.5;
@@ -94,7 +94,6 @@
         .console-message { margin-bottom: 5px; border-bottom: 1px solid #333; padding-bottom: 5px; }
         body.light-theme .console-message { border-bottom-color: #eee; }
 
-        /* Tweaked colors for dark/light themes */
         body.dark-theme .console-log { color: #d4d4d4; }
         body.light-theme .console-log { color: #333; }
         .console-error { color: #f44336; font-weight: bold; }
@@ -124,7 +123,6 @@
         .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
     </style>
 </head>
-<!-- Set initial theme -->
 <body class="dark-theme">
     <header>
         <div class="logo">
@@ -146,10 +144,8 @@
             <div id="editor"></div>
         </div>
         <div class="output-container">
-            <!-- REMOVED: Tab container, REPLACED with static header -->
             <div class="output-header">Console</div>
             <div class="output-content" id="output-content">
-                <!-- REMOVED: iframe and docs content. Only console remains -->
                 <div id="console-output"></div>
             </div>
         </div>
@@ -175,6 +171,8 @@
                 theme: 'vs-dark-custom',
                 automaticLayout: true,
                 minimap: { enabled: true },
+                // CHANGE: Set the editor's font to monospace
+                fontFamily: "'Consolas', 'Monaco', 'Courier New', monospace",
             });
 
             const runBtn = document.getElementById('runBtn');
@@ -218,7 +216,6 @@
                 const code = editor.getValue();
                 clearConsole();
                 
-                // An invisible iframe is still used to isolate the code execution
                 const iframe = document.createElement('iframe');
                 iframe.style.display = 'none';
                 document.body.appendChild(iframe);
@@ -226,13 +223,11 @@
                 const iWindow = iframe.contentWindow;
                 const iDoc = iWindow.document;
 
-                // Create the bridge for console and errors
                 iWindow.console = window.console;
                 iWindow.addEventListener('error', e => {
                     console.error(e.error || e.message);
                 });
 
-                // Execute the code
                 try {
                     const script = iDoc.createElement('script');
                     script.textContent = code;
@@ -241,7 +236,6 @@
                     console.error(err);
                 }
 
-                // Clean up the iframe
                 document.body.removeChild(iframe);
             }
             
