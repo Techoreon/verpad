@@ -2,483 +2,680 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calisthenics Hypertrophy Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Calisthenics Evolution</title>
+    
+    <!-- Premium Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+
     <style>
         :root {
-            --bg: #121212;
-            --card: #1e1e1e;
-            --text: #e0e0e0;
-            --accent: #4caf50;
-            --accent-dim: #2e6b30;
-            --border: #333;
-            --danger: #ff5252;
+            --bg: #0f1115;
+            --card-bg: #181b21;
+            --input-bg: #22262e;
+            --text-main: #ffffff;
+            --text-muted: #94a3b8;
+            --primary: #10b981; /* Emerald Green */
+            --primary-glow: rgba(16, 185, 129, 0.3);
+            --accent: #3b82f6; /* Blue for info */
+            --danger: #ef4444;
+            --border: #2d333b;
+            --radius: 16px;
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Inter', sans-serif;
             background-color: var(--bg);
-            color: var(--text);
+            color: var(--text-main);
             margin: 0;
             padding: 0;
-            line-height: 1.6;
+            padding-bottom: 100px; /* Space for sticky footer */
+            overflow-x: hidden;
         }
 
+        /* --- Header & Nav --- */
+        header {
+            background: rgba(15, 17, 21, 0.85);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid var(--border);
+            padding: 15px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 { margin: 0; font-size: 1.2rem; font-weight: 800; letter-spacing: -0.5px; }
+        .accent-text { color: var(--primary); }
+
+        .date-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--input-bg);
+            border-radius: 12px;
+            padding: 4px;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            padding: 8px 15px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .nav-btn:hover { color: var(--text-main); transform: scale(1.1); }
+
+        input[type="date"] {
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-align: center;
+            outline: none;
+        }
+        
+        /* Date picker icon fix */
+        ::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.6; cursor: pointer; }
+
+        /* --- Progress Bar --- */
+        .progress-container {
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 5px;
+            display: none; /* Hidden on rest days */
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.5s ease;
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        /* --- Main Content --- */
         .container {
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
+            opacity: 0;
+            animation: fadeIn 0.6s forwards;
         }
 
-        /* Header & Date Controls */
-        header {
-            text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 15px;
+        @keyframes fadeIn { to { opacity: 1; } }
+
+        .day-header {
+            margin-bottom: 25px;
+        }
+        .day-label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .workout-title {
+            font-size: 1.75rem;
+            font-weight: 800;
+            margin: 5px 0 10px 0;
+            line-height: 1.2;
+            background: linear-gradient(to right, #fff, #a5b4fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .workout-meta {
+            display: inline-flex;
+            gap: 10px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            background: var(--card-bg);
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
         }
 
-        h1 { margin: 0; font-size: 1.5rem; color: var(--accent); }
-        h2 { margin: 5px 0; font-size: 1.2rem; }
-        p.subtitle { font-size: 0.9rem; color: #aaa; margin: 0; }
+        /* --- Exercise Cards --- */
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid transparent;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
 
-        .date-control {
+        .card:focus-within {
+            border-color: var(--border);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            transform: translateY(-2px);
+        }
+
+        .card.completed {
+            border-color: var(--primary);
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        .card-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin: 15px 0;
-            background: var(--card);
-            padding: 10px;
-            border-radius: 8px;
-        }
-
-        input[type="date"] {
-            background: var(--bg);
-            color: var(--text);
-            border: 1px solid var(--border);
-            padding: 8px;
-            border-radius: 4px;
-        }
-
-        button {
-            background-color: var(--accent);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        button:hover { background-color: var(--accent-dim); }
-        button.secondary { background-color: var(--card); border: 1px solid var(--border); }
-        button.secondary:hover { background-color: var(--border); }
-
-        /* Workout Display */
-        .workout-info {
-            background: var(--card);
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border-left: 4px solid var(--accent);
-        }
-
-        .exercise-card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 15px;
+            align-items: flex-start;
             margin-bottom: 15px;
         }
 
-        .exercise-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 10px;
-            margin-bottom: 10px;
-        }
-
-        .exercise-name { font-weight: bold; font-size: 1.1rem; }
-        .exercise-meta { font-size: 0.85rem; color: #aaa; }
+        .ex-name { font-weight: 700; font-size: 1.1rem; }
+        .ex-details { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
         
-        .progression-tip {
-            font-size: 0.85rem;
-            color: var(--accent);
-            margin-top: 5px;
-            font-style: italic;
+        .badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: var(--input-bg);
+            color: var(--text-muted);
         }
 
-        /* Logging Inputs */
+        .prev-data {
+            font-size: 0.8rem;
+            color: #fbbf24; /* Amber */
+            background: rgba(251, 191, 36, 0.1);
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* --- Inputs Grid --- */
         .log-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 10px;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
         }
 
-        .input-group label {
+        .input-wrapper label {
             display: block;
-            font-size: 0.75rem;
-            color: #aaa;
-            margin-bottom: 3px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-weight: 600;
         }
 
-        .input-group input, .input-group textarea {
+        input[type="text"], input[type="number"], textarea {
             width: 100%;
-            background: var(--bg);
+            background: var(--input-bg);
             border: 1px solid var(--border);
-            color: var(--text);
-            padding: 8px;
-            border-radius: 4px;
-            box-sizing: border-box;
+            color: white;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: var(--transition);
         }
 
-        .notes-area { width: 100%; margin-top: 5px; }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: #2a303a;
+        }
 
-        .checkbox-group {
+        /* --- Custom Checkbox (The "Done" Button) --- */
+        .check-wrapper {
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        /* Hide default checkbox */
+        .custom-check { display: none; }
+
+        .check-label {
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-top: 10px;
-            font-weight: bold;
+            cursor: pointer;
+            padding: 8px 16px;
+            background: var(--input-bg);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            transition: var(--transition);
+            user-select: none;
+            font-weight: 600;
+            font-size: 0.9rem;
         }
 
-        input[type="checkbox"] { transform: scale(1.3); accent-color: var(--accent); }
+        .custom-check:checked + .check-label {
+            background: var(--primary);
+            color: #000;
+            border-color: var(--primary);
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
 
-        /* Rest Day Styling */
-        .rest-day {
+        .custom-check:checked + .check-label::before { content: "✓"; }
+        .custom-check + .check-label::before { content: "○"; margin-right: 2px; }
+
+        /* --- Sticky Footer --- */
+        .sticky-footer {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 580px;
+            z-index: 900;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-save {
+            flex: 1;
+            background: var(--primary);
+            color: #000;
+            border: none;
+            padding: 16px;
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 1rem;
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-save:active { transform: scale(0.98); }
+
+        /* --- Rest Day --- */
+        .rest-view {
             text-align: center;
-            padding: 40px;
-            background: var(--card);
-            border-radius: 8px;
+            padding: 40px 20px;
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border-radius: 24px;
+            border: 1px solid var(--border);
         }
+        .rest-icon { font-size: 4rem; margin-bottom: 20px; display: block; animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
-        /* Settings / Footer */
-        .footer {
-            margin-top: 40px;
+        /* --- Setup Modal --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .modal-box {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 400px;
             text-align: center;
-            font-size: 0.8rem;
-            color: #666;
-            border-top: 1px solid var(--border);
-            padding-top: 20px;
+            border: 1px solid var(--border);
         }
 
-        .setup-box {
-            background: var(--card);
-            padding: 15px;
-            margin-bottom: 20px;
-            border: 1px solid var(--accent);
-            border-radius: 8px;
+        /* --- Toast Notification --- */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: #fff;
+            color: #000;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: 600;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 3000;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+        .toast-icon { color: var(--primary); font-size: 1.2rem; }
+
+        /* --- Settings/Menu --- */
+        .menu-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            width: 50px;
+            border-radius: 14px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+
     </style>
 </head>
 <body>
 
-<div class="container">
+    <!-- Header -->
     <header>
-        <h1>CALISTHENICS TRACKER</h1>
-        <p class="subtitle">6-Day Hypertrophy Split • Infinite Cycle</p>
+        <div class="header-top">
+            <h1>Cali<span class="accent-text">Tracker</span></h1>
+            <div style="width: 24px;"></div> <!-- Spacer for balance -->
+        </div>
+        
+        <!-- Date Navigation -->
+        <div class="date-nav">
+            <button class="nav-btn" onclick="changeDate(-1)">&#8249;</button>
+            <input type="date" id="current-date" onchange="loadDay()">
+            <button class="nav-btn" onclick="changeDate(1)">&#8250;</button>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-container" id="daily-progress-container">
+            <div class="progress-fill" id="daily-progress-bar"></div>
+        </div>
     </header>
 
-    <!-- Settings (Only shows if no start date set) -->
-    <div id="setup-section" class="setup-box" style="display:none;">
-        <h3>⚠️ First Time Setup</h3>
-        <p>Select the date you started (or want to start) Day 1 of the program.</p>
-        <div class="input-group">
-            <label>Program Start Date:</label>
-            <input type="date" id="program-start-date">
+    <!-- Main Scrollable Content -->
+    <div id="workout-container" class="container">
+        <!-- JS Injects Content Here -->
+    </div>
+
+    <!-- Sticky Bottom Actions -->
+    <div class="sticky-footer" id="footer-actions">
+        <button class="menu-btn" onclick="resetProgram()">⚙</button>
+        <button class="btn-save" onclick="saveLog()">
+            <span>Save Log</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </button>
+    </div>
+
+    <!-- Setup Modal -->
+    <div id="setup-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+            <h2>Welcome</h2>
+            <p style="color: var(--text-muted); margin-bottom: 20px;">When did you start (or when will you start) Day 1?</p>
+            <input type="date" id="start-date-input" style="width: 100%; margin-bottom: 20px;">
+            <button class="btn-save" onclick="finishSetup()">Start Journey</button>
         </div>
-        <br>
-        <button onclick="saveStartDate()">Start Program</button>
     </div>
 
-    <!-- Date Navigation -->
-    <div class="date-control" id="main-controls">
-        <button class="secondary" onclick="changeDate(-1)">← Prev</button>
-        <input type="date" id="current-date" onchange="loadDay()">
-        <button class="secondary" onclick="changeDate(1)">Next →</button>
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <span class="toast-icon">●</span>
+        <span id="toast-msg">Saved Successfully</span>
     </div>
-
-    <!-- Dynamic Content Area -->
-    <div id="workout-container"></div>
-
-    <!-- Save Button -->
-    <div style="text-align: center; margin-top: 20px;" id="save-section">
-        <button onclick="saveLog()" style="width: 100%; padding: 15px; font-size: 1.1rem;">✅ Save Workout Log</button>
-    </div>
-
-    <div class="footer">
-        <p>Goal: Hypertrophy (Slow negatives, strict form) • 45-60 mins</p>
-        <p><button class="secondary" style="font-size:0.7rem;" onclick="resetProgram()">Reset Program Data</button></p>
-    </div>
-</div>
 
 <script>
-    // --- DATA & CONFIG ---
+    // --- PROGRAM DATA ---
     const PROGRAM = {
-        1: {
-            title: "PUSH (Chest + Triceps)",
-            exercises: [
-                { name: "Push-ups", sets: 4, reps: "12–20", tempo: "Slow negative" },
-                { name: "Decline push-ups", sets: 4, reps: "10–15", tempo: "Standard" },
-                { name: "Diamond push-ups", sets: 4, reps: "8–12", tempo: "Standard" },
-                { name: "Wide push-ups", sets: 3, reps: "12–15", tempo: "Standard" },
-                { name: "Pseudo planche push-ups", sets: 3, reps: "6–10", tempo: "Controlled" },
-                { name: "Chair Dips", sets: 4, reps: "12–15", tempo: "Standard" },
-                { name: "FINISHER: Tricep extensions (floor)", sets: 3, reps: "10–12", tempo: "Burnout" }
-            ]
-        },
-        2: {
-            title: "PULL (Back + Biceps)",
-            exercises: [
-                { name: "Reverse snow angels", sets: 4, reps: "15", tempo: "Controlled" },
-                { name: "Superman holds", sets: 4, reps: "12", tempo: "Hold 3-5s" },
-                { name: "Doorway rows", sets: 5, reps: "10–12", tempo: "Squeeze" },
-                { name: "Towel rows", sets: 4, reps: "12", tempo: "Standard" },
-                { name: "Towel bicep curls", sets: 4, reps: "10–12", tempo: "Slow" },
-                { name: "Towel face pulls", sets: 3, reps: "15", tempo: "Controlled" },
-                { name: "Towel lat pull-downs", sets: 3, reps: "15–20", tempo: "Standard" },
-                { name: "FINISHER: Towel hammer curls", sets: 3, reps: "12", tempo: "Burnout" }
-            ]
-        },
-        3: {
-            title: "LEGS + GLUTES",
-            exercises: [
-                { name: "Squats", sets: 5, reps: "20", tempo: "Standard" },
-                { name: "Bulgarian split squats", sets: 4, reps: "12 each", tempo: "Controlled" },
-                { name: "Lunges", sets: 4, reps: "15 each", tempo: "Standard" },
-                { name: "Glute bridge", sets: 4, reps: "15–20", tempo: "Squeeze top" },
-                { name: "Calf raises", sets: 4, reps: "20–30", tempo: "Full ROM" },
-                { name: "Wall sit", sets: 2, reps: "1 min", tempo: "Isometric" },
-                { name: "ADD-ON: Slow negative jump squats", sets: 2, reps: "8", tempo: "Slow down, explode up" }
-            ]
-        },
-        4: {
-            title: "PUSH 2 (Chest + Shoulders)",
-            exercises: [
-                { name: "Archer push-ups", sets: 4, reps: "8 each", tempo: "Controlled" },
-                { name: "Hindu push-ups", sets: 3, reps: "12", tempo: "Flow" },
-                { name: "Pseudo planche push-ups", sets: 3, reps: "6–8", tempo: "Strict" },
-                { name: "Pike push-ups", sets: 4, reps: "10–12", tempo: "Vertical" },
-                { name: "Handstand practice", sets: 1, reps: "4 mins", tempo: "Skill" },
-                { name: "Tricep extensions", sets: 3, reps: "12", tempo: "Standard" },
-                { name: "FINISHER: Wide push-ups", sets: 2, reps: "Max", tempo: "Failure" }
-            ]
-        },
-        5: {
-            title: "PULL 2 (Back + Arms)",
-            exercises: [
-                { name: "Towel rows", sets: 4, reps: "12", tempo: "Standard" },
-                { name: "Prone YTWL", sets: 3, reps: "1 Round", tempo: "Controlled" },
-                { name: "Reverse snow angels", sets: 3, reps: "20", tempo: "Standard" },
-                { name: "Door frame iso pull", sets: 3, reps: "20 sec", tempo: "Isometric" },
-                { name: "Towel curls", sets: 4, reps: "12", tempo: "Slow" },
-                { name: "Forearm circuit", sets: 2, reps: "1 Round", tempo: "Burn" },
-                { name: "FINISHER: Superman hold", sets: 3, reps: "30–45 sec", tempo: "Hold" }
-            ]
-        },
-        6: {
-            title: "FULL BODY (Hypertrophy + Skill)",
-            exercises: [
-                { name: "Push-ups", sets: 3, reps: "20", tempo: "Standard" },
-                { name: "Squats", sets: 3, reps: "20", tempo: "Standard" },
-                { name: "Plank walk-outs", sets: 3, reps: "10", tempo: "Core tight" },
-                { name: "Glute bridge", sets: 3, reps: "15", tempo: "Squeeze" },
-                { name: "Pike push-up", sets: 2, reps: "12", tempo: "Controlled" },
-                { name: "SKILL: Handstand Practice", sets: 1, reps: "5 mins", tempo: "Skill" },
-                { name: "SKILL: L-sit Practice", sets: 1, reps: "5 mins", tempo: "Skill" },
-                { name: "CORE: Hollow hold", sets: 1, reps: "30 sec", tempo: "Iso" },
-                { name: "CORE: Flutter kicks", sets: 1, reps: "30 sec", tempo: "Controlled" }
-            ]
-        },
-        0: { // 0 represents Day 7 (Rest) in modulo math
-            title: "REST & RECOVERY",
-            exercises: [],
-            note: "Only 10-min walk + stretch. No cardio, no HIIT, no conditioning."
-        }
+        1: { title: "Push A", focus: "Chest • Triceps", exercises: [
+            { name: "Push-ups", sets: 4, reps: "12–20", tempo: "Slow neg" },
+            { name: "Decline Push-ups", sets: 4, reps: "10–15", tempo: "Standard" },
+            { name: "Diamond Push-ups", sets: 4, reps: "8–12", tempo: "Standard" },
+            { name: "Wide Push-ups", sets: 3, reps: "12–15", tempo: "Standard" },
+            { name: "Pseudo Planche Push-ups", sets: 3, reps: "6–10", tempo: "Controlled" },
+            { name: "Chair Dips", sets: 4, reps: "12–15", tempo: "Standard" },
+            { name: "Finisher: Tricep Ext.", sets: 3, reps: "10–12", tempo: "Burnout" }
+        ]},
+        2: { title: "Pull A", focus: "Back • Biceps", exercises: [
+            { name: "Reverse Snow Angels", sets: 4, reps: "15", tempo: "Controlled" },
+            { name: "Superman Holds", sets: 4, reps: "12", tempo: "Hold 3-5s" },
+            { name: "Doorway Rows", sets: 5, reps: "10–12", tempo: "Squeeze" },
+            { name: "Towel Rows", sets: 4, reps: "12", tempo: "Standard" },
+            { name: "Towel Bicep Curls", sets: 4, reps: "10–12", tempo: "Slow" },
+            { name: "Towel Face Pulls", sets: 3, reps: "15", tempo: "Controlled" },
+            { name: "Towel Lat Pull-downs", sets: 3, reps: "15–20", tempo: "Standard" },
+            { name: "Finisher: Hammer Curls", sets: 3, reps: "12", tempo: "Burnout" }
+        ]},
+        3: { title: "Legs", focus: "Quads • Glutes", exercises: [
+            { name: "Squats", sets: 5, reps: "20", tempo: "Standard" },
+            { name: "Bulgarian Split Squats", sets: 4, reps: "12/side", tempo: "Controlled" },
+            { name: "Lunges", sets: 4, reps: "15/side", tempo: "Standard" },
+            { name: "Glute Bridge", sets: 4, reps: "15–20", tempo: "Squeeze" },
+            { name: "Calf Raises", sets: 4, reps: "20–30", tempo: "Full ROM" },
+            { name: "Wall Sit", sets: 2, reps: "60s", tempo: "Iso" },
+            { name: "Slow Neg. Jump Squats", sets: 2, reps: "8", tempo: "Explode" }
+        ]},
+        4: { title: "Push B", focus: "Chest • Shoulders", exercises: [
+            { name: "Archer Push-ups", sets: 4, reps: "8/side", tempo: "Controlled" },
+            { name: "Hindu Push-ups", sets: 3, reps: "12", tempo: "Flow" },
+            { name: "Pseudo Planche Push-ups", sets: 3, reps: "6–8", tempo: "Strict" },
+            { name: "Pike Push-ups", sets: 4, reps: "10–12", tempo: "Vertical" },
+            { name: "Handstand Practice", sets: 1, reps: "4 mins", tempo: "Skill" },
+            { name: "Tricep Extensions", sets: 3, reps: "12", tempo: "Standard" },
+            { name: "Finisher: Wide Push-ups", sets: 2, reps: "Max", tempo: "Failure" }
+        ]},
+        5: { title: "Pull B", focus: "Back • Arms", exercises: [
+            { name: "Towel Rows", sets: 4, reps: "12", tempo: "Standard" },
+            { name: "Prone YTWL", sets: 3, reps: "1 Round", tempo: "Controlled" },
+            { name: "Reverse Snow Angels", sets: 3, reps: "20", tempo: "Standard" },
+            { name: "Door Frame Iso Pull", sets: 3, reps: "20s", tempo: "Iso" },
+            { name: "Towel Curls", sets: 4, reps: "12", tempo: "Slow" },
+            { name: "Forearm Circuit", sets: 2, reps: "1 Round", tempo: "Burn" },
+            { name: "Finisher: Superman", sets: 3, reps: "30–45s", tempo: "Hold" }
+        ]},
+        6: { title: "Full Body", focus: "Hyp. • Skill", exercises: [
+            { name: "Push-ups", sets: 3, reps: "20", tempo: "Standard" },
+            { name: "Squats", sets: 3, reps: "20", tempo: "Standard" },
+            { name: "Plank Walk-outs", sets: 3, reps: "10", tempo: "Core" },
+            { name: "Glute Bridge", sets: 3, reps: "15", tempo: "Squeeze" },
+            { name: "Pike Push-up", sets: 2, reps: "12", tempo: "Controlled" },
+            { name: "Skill: Handstand", sets: 1, reps: "5 mins", tempo: "Skill" },
+            { name: "Skill: L-sit", sets: 1, reps: "5 mins", tempo: "Skill" },
+            { name: "Core: Hollow Hold", sets: 1, reps: "30s", tempo: "Iso" },
+            { name: "Core: Flutter Kicks", sets: 1, reps: "30s", tempo: "Controlled" }
+        ]},
+        0: { title: "Active Rest", focus: "Recovery", exercises: [], note: "Walk 10 mins. Stretch. Sleep." }
     };
 
-    // --- STATE MANAGEMENT ---
+    // --- STATE ---
     let currentDate = new Date();
     let startDate = null;
 
-    // --- INITIALIZATION ---
+    // --- INIT ---
     window.onload = function() {
         const storedStart = localStorage.getItem('cali_startDate');
         if (storedStart) {
             startDate = new Date(storedStart);
-            document.getElementById('setup-section').style.display = 'none';
-            document.getElementById('main-controls').style.display = 'flex';
-            document.getElementById('save-section').style.display = 'block';
-            
-            // Set date picker to today
             document.getElementById('current-date').valueAsDate = new Date();
             loadDay();
         } else {
-            document.getElementById('setup-section').style.display = 'block';
-            document.getElementById('main-controls').style.display = 'none';
-            document.getElementById('save-section').style.display = 'none';
+            document.getElementById('setup-modal').style.display = 'flex';
+            // Default setup date to today
+            document.getElementById('start-date-input').valueAsDate = new Date();
         }
     };
 
-    function saveStartDate() {
-        const input = document.getElementById('program-start-date').value;
-        if (!input) return alert("Please select a date.");
+    function finishSetup() {
+        const input = document.getElementById('start-date-input').value;
+        if (!input) return showToast("Please select a date", "error");
         
         startDate = new Date(input);
         localStorage.setItem('cali_startDate', startDate.toISOString());
-        location.reload();
+        document.getElementById('setup-modal').style.display = 'none';
+        document.getElementById('current-date').valueAsDate = new Date();
+        loadDay();
     }
 
-    function resetProgram() {
-        if(confirm("Are you sure? This will delete your start date and history.")) {
-            localStorage.clear();
-            location.reload();
-        }
-    }
-
-    // --- LOGIC ---
-    function changeDate(days) {
-        currentDate.setDate(currentDate.getDate() + days);
+    function changeDate(offset) {
+        currentDate.setDate(currentDate.getDate() + offset);
         document.getElementById('current-date').valueAsDate = currentDate;
         loadDay();
     }
 
+    // --- CORE LOGIC ---
     function loadDay() {
-        // Update currentDate object from input
         const pickerVal = document.getElementById('current-date').value;
         currentDate = new Date(pickerVal);
 
-        // Calculate Day Number in Cycle
-        // Difference in time / (1000 * 3600 * 24)
+        // Calculate cycle day
         const diffTime = currentDate.getTime() - startDate.getTime();
         const diffDays = Math.floor(diffTime / (1000 * 3600 * 24));
         
-        let cycleDay = (diffDays % 7) + 1; 
-        if (cycleDay <= 0) cycleDay = (cycleDay + 7); // Handle checking past dates before start
-        
-        // Adjust for 0-indexed object where Day 7 is key 0
-        const dataKey = cycleDay === 7 ? 0 : cycleDay;
-        
-        renderWorkout(dataKey, cycleDay);
+        let cycleDay = (diffDays % 7) + 1;
+        if (cycleDay <= 0) cycleDay = (cycleDay + 7);
+        const dataKey = cycleDay === 7 ? 0 : cycleDay; // Map day 7 to key 0
+
+        renderUI(dataKey, cycleDay);
     }
 
-    function renderWorkout(key, dayNum) {
+    function renderUI(key, dayNum) {
         const container = document.getElementById('workout-container');
         const dayData = PROGRAM[key];
         const dateKey = currentDate.toISOString().split('T')[0];
-        
-        // Retrieve existing logs for today if any
         const todayLog = JSON.parse(localStorage.getItem(`log_${dateKey}`)) || {};
 
-        let html = `
-            <div class="workout-info">
-                <h2>DAY ${dayNum}: ${dayData.title}</h2>
-                <p><strong>Date:</strong> ${dateKey}</p>
-                <p><strong>Goal:</strong> Hypertrophy (Slow negatives)</p>
-                ${dayData.note ? `<p style="color:var(--accent); font-weight:bold;">${dayData.note}</p>` : ''}
+        let html = '';
+
+        // Day Header
+        html += `
+            <div class="day-header">
+                <div class="day-label">Day ${dayNum} • ${dayData.focus}</div>
+                <h2 class="workout-title">${dayData.title}</h2>
+                <div class="workout-meta">⏱ 45–60 mins</div>
+                <div class="workout-meta">🔥 Hypertrophy</div>
             </div>
         `;
 
+        // Rest Day View
         if (key === 0) {
-            // REST DAY
-            html += `<div class="rest-day">
-                <h3>😴 Rest & Recover</h3>
-                <p>Go for a light 10 minute walk. Eat well. Sleep well.</p>
-                <div class="checkbox-group" style="justify-content:center;">
-                    <input type="checkbox" id="rest-check" ${todayLog.completed ? 'checked' : ''}>
-                    <label>Rest Day Completed</label>
+            document.getElementById('daily-progress-container').style.display = 'none';
+            html += `
+                <div class="rest-view">
+                    <span class="rest-icon">🔋</span>
+                    <h3>Recovery Mode</h3>
+                    <p style="color:var(--text-muted); margin-bottom:20px;">${dayData.note}</p>
+                    <div class="check-wrapper" style="justify-content:center;">
+                        <input type="checkbox" id="rest-check" class="custom-check" ${todayLog.completed ? 'checked' : ''}>
+                        <label for="rest-check" class="check-label">Mark Rest Complete</label>
+                    </div>
                 </div>
-            </div>`;
+            `;
         } else {
-            // WORKOUT DAY
+            // Workout View
+            document.getElementById('daily-progress-container').style.display = 'block';
+            
             dayData.exercises.forEach((ex, index) => {
-                // Check past progress for this specific Day Index (7 days ago)
+                // Previous Data Lookup
                 const prevDate = new Date(currentDate);
                 prevDate.setDate(prevDate.getDate() - 7);
                 const prevKey = prevDate.toISOString().split('T')[0];
                 const prevLog = JSON.parse(localStorage.getItem(`log_${prevKey}`)) || {};
                 const prevExData = prevLog.exercises ? prevLog.exercises[index] : null;
 
-                let progressMsg = "";
-                if (prevExData && prevExData.reps) {
-                    progressMsg = `<div class="progression-tip">Previous: ${prevExData.reps} reps @ RPE ${prevExData.rpe || '?'} — Try to beat this!</div>`;
-                }
-
-                // Get saved values for today or empty
+                // Current Data
                 const savedReps = todayLog.exercises ? (todayLog.exercises[index]?.reps || '') : '';
                 const savedRpe = todayLog.exercises ? (todayLog.exercises[index]?.rpe || '') : '';
                 const savedNotes = todayLog.exercises ? (todayLog.exercises[index]?.notes || '') : '';
-                const savedCompleted = todayLog.exercises ? (todayLog.exercises[index]?.completed || false) : false;
+                const isCompleted = todayLog.exercises ? (todayLog.exercises[index]?.completed || false) : false;
+
+                const progressHtml = (prevExData && prevExData.reps) 
+                    ? `<div class="prev-data">⚡ Last week: ${prevExData.reps} reps</div>` 
+                    : '';
 
                 html += `
-                <div class="exercise-card" data-index="${index}">
-                    <div class="exercise-header">
-                        <span class="exercise-name">${ex.name}</span>
-                        <span class="exercise-meta">${ex.sets} sets × ${ex.reps}</span>
-                    </div>
-                    <div style="font-size:0.8rem; margin-bottom:10px; color:#aaa;">
-                        Tempo: ${ex.tempo}
-                        ${progressMsg}
-                    </div>
-                    
-                    <div class="log-grid">
-                        <div class="input-group">
-                            <label>Total Reps</label>
-                            <input type="text" class="log-reps" value="${savedReps}" placeholder="e.g. 15, 15, 12, 10">
+                <div class="card ${isCompleted ? 'completed' : ''}" id="card-${index}">
+                    <div class="card-header">
+                        <div>
+                            <div class="ex-name">${ex.name}</div>
+                            <div class="ex-details">${ex.sets} Sets × ${ex.reps} • ${ex.tempo}</div>
                         </div>
-                        <div class="input-group">
-                            <label>RPE (1-10)</label>
-                            <input type="number" class="log-rpe" value="${savedRpe}" placeholder="Effort">
-                        </div>
-                    </div>
-                    
-                    <div class="input-group">
-                        <label>Notes / Subs</label>
-                        <textarea class="log-notes" rows="1" placeholder="Difficulty, substitutions...">${savedNotes}</textarea>
                     </div>
 
-                    <div class="checkbox-group">
-                        <input type="checkbox" class="log-completed" ${savedCompleted ? 'checked' : ''}>
-                        <label>Exercise Completed</label>
+                    ${progressHtml}
+
+                    <div class="log-grid">
+                        <div class="input-wrapper">
+                            <label>Reps Done</label>
+                            <input type="text" class="log-reps" value="${savedReps}" placeholder="e.g. 12, 12, 10..." inputmode="text">
+                        </div>
+                        <div class="input-wrapper">
+                            <label>RPE (1-10)</label>
+                            <input type="number" class="log-rpe" value="${savedRpe}" placeholder="-" inputmode="numeric">
+                        </div>
+                    </div>
+                    
+                    <div class="input-wrapper">
+                         <label>Notes</label>
+                        <input type="text" class="log-notes" value="${savedNotes}" placeholder="Form notes, difficulty...">
+                    </div>
+
+                    <div class="check-wrapper">
+                        <input type="checkbox" id="chk-${index}" class="custom-check log-completed" 
+                               ${isCompleted ? 'checked' : ''} onchange="toggleCardStyle(${index})">
+                        <label for="chk-${index}" class="check-label">Completed</label>
                     </div>
                 </div>
                 `;
             });
-
-            // Nutrition Reminder
-            html += `
-            <div class="exercise-card" style="border-color: var(--accent);">
-                <h4>🥦 Nutrition Reminder</h4>
-                <p style="font-size:0.85rem; color:#aaa;">Eat 0.8g-1g of protein per lb of bodyweight. Stay hydrated.</p>
-            </div>`;
         }
 
         container.innerHTML = html;
+        updateProgressBar();
+    }
+
+    // --- INTERACTION ---
+    function toggleCardStyle(index) {
+        const card = document.getElementById(`card-${index}`);
+        const checkbox = document.getElementById(`chk-${index}`);
+        if(checkbox.checked) {
+            card.classList.add('completed');
+        } else {
+            card.classList.remove('completed');
+        }
+        updateProgressBar();
+    }
+
+    function updateProgressBar() {
+        const checkboxes = document.querySelectorAll('.log-completed');
+        if (checkboxes.length === 0) return;
+        
+        const total = checkboxes.length;
+        const checked = Array.from(checkboxes).filter(c => c.checked).length;
+        const percentage = (checked / total) * 100;
+        
+        document.getElementById('daily-progress-bar').style.width = percentage + '%';
     }
 
     function saveLog() {
         const dateKey = currentDate.toISOString().split('T')[0];
         const container = document.getElementById('workout-container');
-        
-        // Check if it's a rest day
-        if (container.querySelector('#rest-check')) {
+
+        // Handle Rest Day
+        if (document.getElementById('rest-check')) {
             const isRestDone = document.getElementById('rest-check').checked;
-            const logData = { completed: isRestDone, type: 'REST' };
-            localStorage.setItem(`log_${dateKey}`, JSON.stringify(logData));
-            alert("Rest day saved!");
+            localStorage.setItem(`log_${dateKey}`, JSON.stringify({ completed: isRestDone, type: 'REST' }));
+            showToast("Rest day recorded!");
             return;
         }
 
-        // Collect Exercise Data
-        const cards = container.querySelectorAll('.exercise-card[data-index]');
+        // Handle Workout Day
+        const cards = container.querySelectorAll('.card');
         const exercisesData = {};
-
-        cards.forEach(card => {
-            const idx = card.getAttribute('data-index');
-            exercisesData[idx] = {
+        
+        cards.forEach((card, index) => {
+            exercisesData[index] = {
                 reps: card.querySelector('.log-reps').value,
                 rpe: card.querySelector('.log-rpe').value,
                 notes: card.querySelector('.log-notes').value,
@@ -486,25 +683,31 @@
             };
         });
 
-        const fullLog = {
-            type: 'WORKOUT',
-            exercises: exercisesData
-        };
-
+        const fullLog = { type: 'WORKOUT', exercises: exercisesData };
         localStorage.setItem(`log_${dateKey}`, JSON.stringify(fullLog));
         
-        // Weekly Progression Check Logic (Visual feedback)
-        const button = document.querySelector('#save-section button');
-        const originalText = button.innerText;
-        button.innerText = "Saved! Great work.";
-        button.style.backgroundColor = "#2e6b30";
-        setTimeout(() => {
-            button.innerText = originalText;
-            button.style.backgroundColor = "";
-        }, 2000);
+        showToast("Workout Saved Successfully");
+    }
+
+    function showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        const msg = document.getElementById('toast-msg');
+        const icon = document.querySelector('.toast-icon');
+        
+        msg.textContent = message;
+        icon.style.color = type === 'error' ? 'var(--danger)' : 'var(--primary)';
+        
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    function resetProgram() {
+        if(confirm("Reset all data and start date? This cannot be undone.")) {
+            localStorage.clear();
+            location.reload();
+        }
     }
 
 </script>
-
 </body>
 </html>
