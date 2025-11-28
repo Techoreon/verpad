@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calisthenics Hypertrophy Tracker</title>
+    <style>
+        :root {
+            --bg: #121212;
+            --card: #1e1e1e;
+            --text: #e0e0e0;
+            --accent: #4caf50;
+            --accent-dim: #2e6b30;
+            --border: #333;
+            --danger: #ff5252;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header & Date Controls */
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 15px;
+        }
+
+        h1 { margin: 0; font-size: 1.5rem; color: var(--accent); }
+        h2 { margin: 5px 0; font-size: 1.2rem; }
+        p.subtitle { font-size: 0.9rem; color: #aaa; margin: 0; }
+
+        .date-control {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 15px 0;
+            background: var(--card);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        input[type="date"] {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover { background-color: var(--accent-dim); }
+        button.secondary { background-color: var(--card); border: 1px solid var(--border); }
+        button.secondary:hover { background-color: var(--border); }
+
+        /* Workout Display */
+        .workout-info {
+            background: var(--card);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--accent);
+        }
+
+        .exercise-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .exercise-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        .exercise-name { font-weight: bold; font-size: 1.1rem; }
+        .exercise-meta { font-size: 0.85rem; color: #aaa; }
+        
+        .progression-tip {
+            font-size: 0.85rem;
+            color: var(--accent);
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        /* Logging Inputs */
+        .log-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.75rem;
+            color: #aaa;
+            margin-bottom: 3px;
+        }
+
+        .input-group input, .input-group textarea {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .notes-area { width: 100%; margin-top: 5px; }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        input[type="checkbox"] { transform: scale(1.3); accent-color: var(--accent); }
+
+        /* Rest Day Styling */
+        .rest-day {
+            text-align: center;
+            padding: 40px;
+            background: var(--card);
+            border-radius: 8px;
+        }
+
+        /* Settings / Footer */
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #666;
+            border-top: 1px solid var(--border);
+            padding-top: 20px;
+        }
+
+        .setup-box {
+            background: var(--card);
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>CALISTHENICS TRACKER</h1>
+        <p class="subtitle">6-Day Hypertrophy Split • Infinite Cycle</p>
+    </header>
+
+    <!-- Settings (Only shows if no start date set) -->
+    <div id="setup-section" class="setup-box" style="display:none;">
+        <h3>⚠️ First Time Setup</h3>
+        <p>Select the date you started (or want to start) Day 1 of the program.</p>
+        <div class="input-group">
+            <label>Program Start Date:</label>
+            <input type="date" id="program-start-date">
+        </div>
+        <br>
+        <button onclick="saveStartDate()">Start Program</button>
+    </div>
+
+    <!-- Date Navigation -->
+    <div class="date-control" id="main-controls">
+        <button class="secondary" onclick="changeDate(-1)">← Prev</button>
+        <input type="date" id="current-date" onchange="loadDay()">
+        <button class="secondary" onclick="changeDate(1)">Next →</button>
+    </div>
+
+    <!-- Dynamic Content Area -->
+    <div id="workout-container"></div>
+
+    <!-- Save Button -->
+    <div style="text-align: center; margin-top: 20px;" id="save-section">
+        <button onclick="saveLog()" style="width: 100%; padding: 15px; font-size: 1.1rem;">✅ Save Workout Log</button>
+    </div>
+
+    <div class="footer">
+        <p>Goal: Hypertrophy (Slow negatives, strict form) • 45-60 mins</p>
+        <p><button class="secondary" style="font-size:0.7rem;" onclick="resetProgram()">Reset Program Data</button></p>
+    </div>
+</div>
+
+<script>
+    // --- DATA & CONFIG ---
+    const PROGRAM = {
+        1: {
+            title: "PUSH (Chest + Triceps)",
+            exercises: [
+                { name: "Push-ups", sets: 4, reps: "12–20", tempo: "Slow negative" },
+                { name: "Decline push-ups", sets: 4, reps: "10–15", tempo: "Standard" },
+                { name: "Diamond push-ups", sets: 4, reps: "8–12", tempo: "Standard" },
+                { name: "Wide push-ups", sets: 3, reps: "12–15", tempo: "Standard" },
+                { name: "Pseudo planche push-ups", sets: 3, reps: "6–10", tempo: "Controlled" },
+                { name: "Chair Dips", sets: 4, reps: "12–15", tempo: "Standard" },
+                { name: "FINISHER: Tricep extensions (floor)", sets: 3, reps: "10–12", tempo: "Burnout" }
+            ]
+        },
+        2: {
+            title: "PULL (Back + Biceps)",
+            exercises: [
+                { name: "Reverse snow angels", sets: 4, reps: "15", tempo: "Controlled" },
+                { name: "Superman holds", sets: 4, reps: "12", tempo: "Hold 3-5s" },
+                { name: "Doorway rows", sets: 5, reps: "10–12", tempo: "Squeeze" },
+                { name: "Towel rows", sets: 4, reps: "12", tempo: "Standard" },
+                { name: "Towel bicep curls", sets: 4, reps: "10–12", tempo: "Slow" },
+                { name: "Towel face pulls", sets: 3, reps: "15", tempo: "Controlled" },
+                { name: "Towel lat pull-downs", sets: 3, reps: "15–20", tempo: "Standard" },
+                { name: "FINISHER: Towel hammer curls", sets: 3, reps: "12", tempo: "Burnout" }
+            ]
+        },
+        3: {
+            title: "LEGS + GLUTES",
+            exercises: [
+                { name: "Squats", sets: 5, reps: "20", tempo: "Standard" },
+                { name: "Bulgarian split squats", sets: 4, reps: "12 each", tempo: "Controlled" },
+                { name: "Lunges", sets: 4, reps: "15 each", tempo: "Standard" },
+                { name: "Glute bridge", sets: 4, reps: "15–20", tempo: "Squeeze top" },
+                { name: "Calf raises", sets: 4, reps: "20–30", tempo: "Full ROM" },
+                { name: "Wall sit", sets: 2, reps: "1 min", tempo: "Isometric" },
+                { name: "ADD-ON: Slow negative jump squats", sets: 2, reps: "8", tempo: "Slow down, explode up" }
+            ]
+        },
+        4: {
+            title: "PUSH 2 (Chest + Shoulders)",
+            exercises: [
+                { name: "Archer push-ups", sets: 4, reps: "8 each", tempo: "Controlled" },
+                { name: "Hindu push-ups", sets: 3, reps: "12", tempo: "Flow" },
+                { name: "Pseudo planche push-ups", sets: 3, reps: "6–8", tempo: "Strict" },
+                { name: "Pike push-ups", sets: 4, reps: "10–12", tempo: "Vertical" },
+                { name: "Handstand practice", sets: 1, reps: "4 mins", tempo: "Skill" },
+                { name: "Tricep extensions", sets: 3, reps: "12", tempo: "Standard" },
+                { name: "FINISHER: Wide push-ups", sets: 2, reps: "Max", tempo: "Failure" }
+            ]
+        },
+        5: {
+            title: "PULL 2 (Back + Arms)",
+            exercises: [
+                { name: "Towel rows", sets: 4, reps: "12", tempo: "Standard" },
+                { name: "Prone YTWL", sets: 3, reps: "1 Round", tempo: "Controlled" },
+                { name: "Reverse snow angels", sets: 3, reps: "20", tempo: "Standard" },
+                { name: "Door frame iso pull", sets: 3, reps: "20 sec", tempo: "Isometric" },
+                { name: "Towel curls", sets: 4, reps: "12", tempo: "Slow" },
+                { name: "Forearm circuit", sets: 2, reps: "1 Round", tempo: "Burn" },
+                { name: "FINISHER: Superman hold", sets: 3, reps: "30–45 sec", tempo: "Hold" }
+            ]
+        },
+        6: {
+            title: "FULL BODY (Hypertrophy + Skill)",
+            exercises: [
+                { name: "Push-ups", sets: 3, reps: "20", tempo: "Standard" },
+                { name: "Squats", sets: 3, reps: "20", tempo: "Standard" },
+                { name: "Plank walk-outs", sets: 3, reps: "10", tempo: "Core tight" },
+                { name: "Glute bridge", sets: 3, reps: "15", tempo: "Squeeze" },
+                { name: "Pike push-up", sets: 2, reps: "12", tempo: "Controlled" },
+                { name: "SKILL: Handstand Practice", sets: 1, reps: "5 mins", tempo: "Skill" },
+                { name: "SKILL: L-sit Practice", sets: 1, reps: "5 mins", tempo: "Skill" },
+                { name: "CORE: Hollow hold", sets: 1, reps: "30 sec", tempo: "Iso" },
+                { name: "CORE: Flutter kicks", sets: 1, reps: "30 sec", tempo: "Controlled" }
+            ]
+        },
+        0: { // 0 represents Day 7 (Rest) in modulo math
+            title: "REST & RECOVERY",
+            exercises: [],
+            note: "Only 10-min walk + stretch. No cardio, no HIIT, no conditioning."
+        }
+    };
+
+    // --- STATE MANAGEMENT ---
+    let currentDate = new Date();
+    let startDate = null;
+
+    // --- INITIALIZATION ---
+    window.onload = function() {
+        const storedStart = localStorage.getItem('cali_startDate');
+        if (storedStart) {
+            startDate = new Date(storedStart);
+            document.getElementById('setup-section').style.display = 'none';
+            document.getElementById('main-controls').style.display = 'flex';
+            document.getElementById('save-section').style.display = 'block';
+            
+            // Set date picker to today
+            document.getElementById('current-date').valueAsDate = new Date();
+            loadDay();
+        } else {
+            document.getElementById('setup-section').style.display = 'block';
+            document.getElementById('main-controls').style.display = 'none';
+            document.getElementById('save-section').style.display = 'none';
+        }
+    };
+
+    function saveStartDate() {
+        const input = document.getElementById('program-start-date').value;
+        if (!input) return alert("Please select a date.");
+        
+        startDate = new Date(input);
+        localStorage.setItem('cali_startDate', startDate.toISOString());
+        location.reload();
+    }
+
+    function resetProgram() {
+        if(confirm("Are you sure? This will delete your start date and history.")) {
+            localStorage.clear();
+            location.reload();
+        }
+    }
+
+    // --- LOGIC ---
+    function changeDate(days) {
+        currentDate.setDate(currentDate.getDate() + days);
+        document.getElementById('current-date').valueAsDate = currentDate;
+        loadDay();
+    }
+
+    function loadDay() {
+        // Update currentDate object from input
+        const pickerVal = document.getElementById('current-date').value;
+        currentDate = new Date(pickerVal);
+
+        // Calculate Day Number in Cycle
+        // Difference in time / (1000 * 3600 * 24)
+        const diffTime = currentDate.getTime() - startDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 3600 * 24));
+        
+        let cycleDay = (diffDays % 7) + 1; 
+        if (cycleDay <= 0) cycleDay = (cycleDay + 7); // Handle checking past dates before start
+        
+        // Adjust for 0-indexed object where Day 7 is key 0
+        const dataKey = cycleDay === 7 ? 0 : cycleDay;
+        
+        renderWorkout(dataKey, cycleDay);
+    }
+
+    function renderWorkout(key, dayNum) {
+        const container = document.getElementById('workout-container');
+        const dayData = PROGRAM[key];
+        const dateKey = currentDate.toISOString().split('T')[0];
+        
+        // Retrieve existing logs for today if any
+        const todayLog = JSON.parse(localStorage.getItem(`log_${dateKey}`)) || {};
+
+        let html = `
+            <div class="workout-info">
+                <h2>DAY ${dayNum}: ${dayData.title}</h2>
+                <p><strong>Date:</strong> ${dateKey}</p>
+                <p><strong>Goal:</strong> Hypertrophy (Slow negatives)</p>
+                ${dayData.note ? `<p style="color:var(--accent); font-weight:bold;">${dayData.note}</p>` : ''}
+            </div>
+        `;
+
+        if (key === 0) {
+            // REST DAY
+            html += `<div class="rest-day">
+                <h3>😴 Rest & Recover</h3>
+                <p>Go for a light 10 minute walk. Eat well. Sleep well.</p>
+                <div class="checkbox-group" style="justify-content:center;">
+                    <input type="checkbox" id="rest-check" ${todayLog.completed ? 'checked' : ''}>
+                    <label>Rest Day Completed</label>
+                </div>
+            </div>`;
+        } else {
+            // WORKOUT DAY
+            dayData.exercises.forEach((ex, index) => {
+                // Check past progress for this specific Day Index (7 days ago)
+                const prevDate = new Date(currentDate);
+                prevDate.setDate(prevDate.getDate() - 7);
+                const prevKey = prevDate.toISOString().split('T')[0];
+                const prevLog = JSON.parse(localStorage.getItem(`log_${prevKey}`)) || {};
+                const prevExData = prevLog.exercises ? prevLog.exercises[index] : null;
+
+                let progressMsg = "";
+                if (prevExData && prevExData.reps) {
+                    progressMsg = `<div class="progression-tip">Previous: ${prevExData.reps} reps @ RPE ${prevExData.rpe || '?'} — Try to beat this!</div>`;
+                }
+
+                // Get saved values for today or empty
+                const savedReps = todayLog.exercises ? (todayLog.exercises[index]?.reps || '') : '';
+                const savedRpe = todayLog.exercises ? (todayLog.exercises[index]?.rpe || '') : '';
+                const savedNotes = todayLog.exercises ? (todayLog.exercises[index]?.notes || '') : '';
+                const savedCompleted = todayLog.exercises ? (todayLog.exercises[index]?.completed || false) : false;
+
+                html += `
+                <div class="exercise-card" data-index="${index}">
+                    <div class="exercise-header">
+                        <span class="exercise-name">${ex.name}</span>
+                        <span class="exercise-meta">${ex.sets} sets × ${ex.reps}</span>
+                    </div>
+                    <div style="font-size:0.8rem; margin-bottom:10px; color:#aaa;">
+                        Tempo: ${ex.tempo}
+                        ${progressMsg}
+                    </div>
+                    
+                    <div class="log-grid">
+                        <div class="input-group">
+                            <label>Total Reps</label>
+                            <input type="text" class="log-reps" value="${savedReps}" placeholder="e.g. 15, 15, 12, 10">
+                        </div>
+                        <div class="input-group">
+                            <label>RPE (1-10)</label>
+                            <input type="number" class="log-rpe" value="${savedRpe}" placeholder="Effort">
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Notes / Subs</label>
+                        <textarea class="log-notes" rows="1" placeholder="Difficulty, substitutions...">${savedNotes}</textarea>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="log-completed" ${savedCompleted ? 'checked' : ''}>
+                        <label>Exercise Completed</label>
+                    </div>
+                </div>
+                `;
+            });
+
+            // Nutrition Reminder
+            html += `
+            <div class="exercise-card" style="border-color: var(--accent);">
+                <h4>🥦 Nutrition Reminder</h4>
+                <p style="font-size:0.85rem; color:#aaa;">Eat 0.8g-1g of protein per lb of bodyweight. Stay hydrated.</p>
+            </div>`;
+        }
+
+        container.innerHTML = html;
+    }
+
+    function saveLog() {
+        const dateKey = currentDate.toISOString().split('T')[0];
+        const container = document.getElementById('workout-container');
+        
+        // Check if it's a rest day
+        if (container.querySelector('#rest-check')) {
+            const isRestDone = document.getElementById('rest-check').checked;
+            const logData = { completed: isRestDone, type: 'REST' };
+            localStorage.setItem(`log_${dateKey}`, JSON.stringify(logData));
+            alert("Rest day saved!");
+            return;
+        }
+
+        // Collect Exercise Data
+        const cards = container.querySelectorAll('.exercise-card[data-index]');
+        const exercisesData = {};
+
+        cards.forEach(card => {
+            const idx = card.getAttribute('data-index');
+            exercisesData[idx] = {
+                reps: card.querySelector('.log-reps').value,
+                rpe: card.querySelector('.log-rpe').value,
+                notes: card.querySelector('.log-notes').value,
+                completed: card.querySelector('.log-completed').checked
+            };
+        });
+
+        const fullLog = {
+            type: 'WORKOUT',
+            exercises: exercisesData
+        };
+
+        localStorage.setItem(`log_${dateKey}`, JSON.stringify(fullLog));
+        
+        // Weekly Progression Check Logic (Visual feedback)
+        const button = document.querySelector('#save-section button');
+        const originalText = button.innerText;
+        button.innerText = "Saved! Great work.";
+        button.style.backgroundColor = "#2e6b30";
+        setTimeout(() => {
+            button.innerText = originalText;
+            button.style.backgroundColor = "";
+        }, 2000);
+    }
+
+</script>
+
+</body>
+</html>
