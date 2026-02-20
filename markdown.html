@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Polyglot Notebook - IDE</title>
-
-    <!-- Tailwind CSS -->
+    <title>Polyglot Notebook - Robust Edition</title>
+    
+    <!-- CSS Framework -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -13,598 +13,307 @@
             theme: {
                 extend: {
                     colors: {
-                        gh: { 
-                            bg: '#0d1117', 
-                            panel: '#161b22', 
-                            border: '#30363d', 
-                            text: '#c9d1d9', 
-                            accent: '#58a6ff',
-                            success: '#238636',
-                            danger: '#da3633'
-                        }
-                    },
-                    fontFamily: {
-                        mono: ['SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', 'monospace'],
-                        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Helvetica', 'Arial', 'sans-serif']
+                        editor: '#1e1e1e',
+                        panel: '#252526',
+                        accent: '#007acc',
+                        text: '#cccccc'
                     }
                 }
             }
         }
     </script>
 
-    <!-- React & DOM -->
+    <!-- React Core -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Framer Motion -->
-    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
-
-    <!-- Monaco Editor -->
-    <script src="https://cdn.jsdelivr.net/npm/@monaco-editor/loader@1.4.0/lib/umd/monaco-loader.min.js"></script>
-
-    <!-- Markdown Engine & Plugins -->
+    <!-- Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.2/dist/markdown-it.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/markdown-it-task-lists@2.1.1/dist/markdown-it-task-lists.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/markdown-it-anchor@8.6.7/dist/markdownItAnchor.min.js"></script>
-    
-    <!-- Syntax Highlight -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-
-    <!-- KaTeX (Math) -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/markdown-it-texmath@1.0.0/texmath.min.js"></script>
-
-    <!-- Mermaid (Diagrams) -->
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
-
-    <!-- Pyodide (Python) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/vs2015.min.css">
+    
+    <!-- Pyodide -->
     <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
 
-    <!-- HTML2PDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Monaco Editor (Loader only) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
 
     <style>
-        body { background-color: #0d1117; color: #c9d1d9; overflow: hidden; }
+        body { background-color: #1e1e1e; color: #cccccc; margin: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        
+        /* Native Loading Screen */
+        #loader { position: fixed; inset: 0; background: #1e1e1e; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; transition: opacity 0.5s; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top-color: #007acc; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* App Styles */
+        .markdown-body { padding: 40px; font-size: 16px; line-height: 1.6; color: #d4d4d4; }
+        .markdown-body h1, .markdown-body h2 { border-bottom: 1px solid #333; padding-bottom: 10px; color: #fff; margin-top: 24px; }
+        .markdown-body pre { background: #111; padding: 16px; border-radius: 6px; overflow-x: auto; }
+        .markdown-body code { font-family: 'Consolas', monospace; background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px; }
+        .markdown-body pre code { background: transparent; padding: 0; }
+        .markdown-body blockquote { border-left: 4px solid #007acc; padding-left: 16px; color: #aaa; }
         
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 10px; height: 10px; }
-        ::-webkit-scrollbar-track { background: #0d1117; }
-        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 5px; border: 2px solid #0d1117; }
-        ::-webkit-scrollbar-thumb:hover { background: #58a6ff; }
+        ::-webkit-scrollbar-track { background: #1e1e1e; }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 5px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
 
-        /* Markdown Styles */
-        .markdown-body { font-size: 15px; line-height: 1.6; max-width: 900px; margin: 0 auto; padding-bottom: 100px; }
-        .markdown-body h1, .markdown-body h2, .markdown-body h3 { border-bottom: 1px solid #30363d; padding-bottom: 0.3em; margin-top: 24px; color: #fff; font-weight: 600; }
-        .markdown-body p { margin-bottom: 16px; }
-        .markdown-body ul, .markdown-body ol { padding-left: 2em; margin-bottom: 16px; }
-        .markdown-body blockquote { border-left: 4px solid #30363d; color: #8b949e; padding-left: 1em; margin: 0 0 16px 0; }
-        .markdown-body code { background: rgba(110,118,129,0.4); padding: 0.2em 0.4em; border-radius: 6px; font-family: 'SFMono-Regular', monospace; font-size: 85%; }
-        .markdown-body pre { background: #161b22; padding: 16px; border-radius: 6px; overflow: auto; margin-bottom: 16px; border: 1px solid #30363d; }
-        .markdown-body pre code { background: transparent; padding: 0; color: inherit; font-size: 100%; }
-        .markdown-body a { color: #58a6ff; text-decoration: none; }
-        .markdown-body a:hover { text-decoration: underline; }
-        .markdown-body table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-        .markdown-body th, .markdown-body td { border: 1px solid #30363d; padding: 6px 13px; }
-        .markdown-body tr:nth-child(2n) { background-color: #161b22; }
-        .markdown-body img { max-width: 100%; box-sizing: content-box; background-color: #0d1117; }
-        
-        /* Code Block Wrapper */
-        .code-wrapper { position: relative; margin-bottom: 16px; group-hover: opacity: 1; }
-        .run-button {
-            position: absolute; top: 10px; right: 10px;
-            background: #238636; color: white; border: none;
-            padding: 4px 10px; border-radius: 4px; font-size: 12px;
-            font-weight: 600; cursor: pointer; opacity: 0;
-            transition: opacity 0.2s, background 0.2s;
-            display: flex; align-items: center; gap: 4px; z-index: 10;
-        }
-        .code-wrapper:hover .run-button { opacity: 1; }
-        .run-button:hover { background: #2ea043; }
+        .resizer { width: 5px; background: #333; cursor: col-resize; transition: 0.2s; z-index: 50; }
+        .resizer:hover { background: #007acc; }
 
-        /* Resizer */
-        .resizer { width: 4px; background: #30363d; cursor: col-resize; transition: background 0.2s; z-index: 20; }
-        .resizer:hover, .resizer.active { background: #58a6ff; }
-
-        /* Mermaid */
-        .mermaid { display: flex; justify-content: center; background: #161b22; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .run-btn { position: absolute; top: 10px; right: 10px; background: #238636; border: none; color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; opacity: 0.7; transition: 0.2s; }
+        .run-btn:hover { opacity: 1; transform: scale(1.05); }
+        .code-wrap { position: relative; margin: 1em 0; }
     </style>
 </head>
 <body>
+    
+    <!-- Initial Loading Indicator -->
+    <div id="loader">
+        <div class="spinner"></div>
+        <div id="loader-text">Initializing Environment...</div>
+    </div>
+
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef, useMemo, useCallback } = React;
-        const { motion, AnimatePresence } = window.Motion;
+        const { useState, useEffect, useRef, useLayoutEffect, useCallback } = React;
 
-        // --- ICONS (Lucide Style) ---
-        const Icon = ({ name, size = 18, className = "" }) => {
-            const icons = {
-                menu: <path d="M3 12h18M3 6h18M3 18h18" />,
-                code: <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />,
-                play: <polygon points="5 3 19 12 5 21 5 3" />,
-                terminal: <polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" />,
-                save: <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" />,
-                folder: <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />,
-                download: <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />,
-                maximize: <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />,
-                minimize: <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />,
-                x: <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />,
-                trash: <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-            };
-            return (
-                <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-                    {icons[name] || <circle cx="12" cy="12" r="10"/>}
-                </svg>
-            );
-        };
+        // --- ERROR BOUNDARY ---
+        class ErrorBoundary extends React.Component {
+            constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+            static getDerivedStateFromError(error) { return { hasError: true, error }; }
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div className="p-10 text-red-500">
+                            <h1 className="text-2xl font-bold mb-4">Application Crashed</h1>
+                            <pre className="bg-black p-4 rounded border border-red-900">{this.state.error.toString()}</pre>
+                            <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-gray-800 rounded text-white">Reload</button>
+                        </div>
+                    );
+                }
+                return this.props.children;
+            }
+        }
 
-        // --- CODE EXECUTION SERVICE ---
+        // --- UTILS ---
         const executeCode = async (lang, code) => {
-            window.dispatchEvent(new CustomEvent('term-add', { detail: { type: 'info', text: `> Running ${lang}...` } }));
+            window.dispatchEvent(new CustomEvent('console-log', { detail: { type: 'system', text: `> Running ${lang}...` } }));
             
             if (lang === 'js') {
-                const logs = [];
-                const originalLog = console.log;
-                const originalErr = console.error;
+                const log = console.log;
+                const err = console.error;
                 try {
-                    console.log = (...args) => window.dispatchEvent(new CustomEvent('term-add', { detail: { type: 'log', text: args.join(' ') } }));
-                    console.error = (...args) => window.dispatchEvent(new CustomEvent('term-add', { detail: { type: 'error', text: args.join(' ') } }));
-                    
-                    const result = eval(code);
-                    if (result !== undefined) console.log(result);
-                } catch (e) {
-                    console.error(e.toString());
-                } finally {
-                    console.log = originalLog;
-                    console.error = originalErr;
-                }
+                    console.log = (...args) => window.dispatchEvent(new CustomEvent('console-log', { detail: { type: 'log', text: args.join(' ') } }));
+                    console.error = (...args) => window.dispatchEvent(new CustomEvent('console-log', { detail: { type: 'error', text: args.join(' ') } }));
+                    const res = eval(code);
+                    if (res !== undefined) console.log(res);
+                } catch (e) { console.error(e.message); } 
+                finally { console.log = log; console.error = err; }
             } else if (lang === 'py') {
-                if (!window.pyodide) {
-                    window.dispatchEvent(new CustomEvent('term-add', { detail: { type: 'error', text: 'Python environment not ready yet.' } }));
-                    return;
-                }
-                try {
-                    await window.pyodide.runPythonAsync(code);
-                } catch (e) {
-                    window.dispatchEvent(new CustomEvent('term-add', { detail: { type: 'error', text: e.toString() } }));
-                }
+                if (!window.pyodide) return window.dispatchEvent(new CustomEvent('console-log', { detail: { type: 'error', text: 'Python not ready yet.' } }));
+                try { await window.pyodide.runPythonAsync(code); } 
+                catch (e) { window.dispatchEvent(new CustomEvent('console-log', { detail: { type: 'error', text: e.message } })); }
             }
         };
 
-        // Global bridge for the Run buttons injected into HTML
-        window.runSnippet = (lang, encodedCode) => {
-            executeCode(lang, decodeURIComponent(encodedCode));
-            window.dispatchEvent(new CustomEvent('open-term'));
-        };
+        window.runSnippet = (lang, encoded) => executeCode(lang, decodeURIComponent(encoded));
 
-        // --- MARKDOWN SETUP ---
-        const md = window.markdownit({
-            html: true,
-            linkify: true,
-            typographer: true,
-            highlight: function (str, lang) {
-                if (lang && window.hljs.getLanguage(lang)) {
-                    try {
-                        return window.hljs.highlight(str, { language: lang }).value;
-                    } catch (__) {}
-                }
-                return ''; // use external default escaping
-            }
-        });
-
-        if (window.texmath && window.katex) md.use(window.texmath, { engine: window.katex, delimiters: 'dollars' });
-        if (window.markdownitTaskLists) md.use(window.markdownitTaskLists);
-        if (window.markdownItAnchor) md.use(window.markdownItAnchor);
-
-        // Custom Fence Renderer
-        const defaultFence = md.renderer.rules.fence || ((tokens, idx, options, env, self) => self.renderToken(tokens, idx, options));
-        
-        md.renderer.rules.fence = (tokens, idx, options, env, self) => {
-            const token = tokens[idx];
-            const info = token.info ? md.utils.unescapeAll(token.info).trim() : '';
-            const lang = info.split(/\s+/)[0];
-            const code = token.content;
-
-            if (lang === 'mermaid') {
-                return `<div class="mermaid">${code}</div>`;
-            }
-
-            let highlighted = md.utils.escapeHtml(code);
-            if (lang && window.hljs.getLanguage(lang)) {
-                try { highlighted = window.hljs.highlight(code, { language: lang }).value; } catch (e) {}
-            }
-
-            let btn = '';
-            if (lang === 'js' || lang === 'javascript' || lang === 'py' || lang === 'python') {
-                const runtimeLang = (lang === 'py' || lang === 'python') ? 'py' : 'js';
-                btn = `<button class="run-button" onclick="window.runSnippet('${runtimeLang}', '${encodeURIComponent(code)}')">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                    Run
-                </button>`;
-            }
-
-            return `<div class="code-wrapper">${btn}<pre class="hljs language-${lang}"><code>${highlighted}</code></pre></div>`;
-        };
-
-        // --- COMPONENTS ---
-
-        const Sidebar = ({ markdown, isOpen }) => {
-            const [headings, setHeadings] = useState([]);
-
-            useEffect(() => {
-                const lines = markdown.split('\n');
-                const h = [];
-                lines.forEach(line => {
-                    const match = line.match(/^(#{1,3})\s+(.*)/);
-                    if (match) {
-                        h.push({ level: match[1].length, text: match[2], id: match[2].toLowerCase().replace(/[^\w]+/g, '-') });
-                    }
-                });
-                setHeadings(h);
-            }, [markdown]);
-
-            const scrollTo = (id) => {
-                const el = document.getElementById(id);
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-            };
-
-            return (
-                <AnimatePresence>
-                    {isOpen && (
-                        <motion.div 
-                            initial={{ width: 0, opacity: 0 }} 
-                            animate={{ width: 240, opacity: 1 }} 
-                            exit={{ width: 0, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="bg-gh-panel border-r border-gh-border flex flex-col shrink-0 overflow-hidden"
-                        >
-                            <div className="p-3 border-b border-gh-border font-bold text-xs uppercase tracking-wider text-gh-text opacity-70">
-                                Outline
-                            </div>
-                            <div className="flex-1 overflow-y-auto p-2">
-                                {headings.map((h, i) => (
-                                    <div 
-                                        key={i} 
-                                        onClick={() => scrollTo(h.id)}
-                                        className="cursor-pointer hover:bg-white/5 p-1 rounded text-sm truncate text-gray-400 hover:text-white transition-colors"
-                                        style={{ paddingLeft: `${(h.level - 1) * 12 + 8}px` }}
-                                    >
-                                        {h.text}
-                                    </div>
-                                ))}
-                                {headings.length === 0 && <div className="text-xs text-gray-600 p-2 italic">No headings found</div>}
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            );
-        };
-
-        const Terminal = ({ isOpen, onClose }) => {
-            const [logs, setLogs] = useState([]);
-            const endRef = useRef(null);
-
-            useEffect(() => {
-                const handleAdd = (e) => setLogs(prev => [...prev, e.detail]);
-                const handleClear = () => setLogs([]);
-                
-                window.addEventListener('term-add', handleAdd);
-                window.addEventListener('term-clear', handleClear);
-                return () => {
-                    window.removeEventListener('term-add', handleAdd);
-                    window.removeEventListener('term-clear', handleClear);
-                };
-            }, []);
-
-            useEffect(() => {
-                if(endRef.current) endRef.current.scrollIntoView();
-            }, [logs, isOpen]);
-
-            return (
-                <AnimatePresence>
-                    {isOpen && (
-                        <motion.div 
-                            initial={{ height: 0 }} 
-                            animate={{ height: 200 }} 
-                            exit={{ height: 0 }}
-                            className="bg-black border-t border-gh-border flex flex-col shrink-0 relative"
-                        >
-                            <div className="flex justify-between items-center px-4 py-1 bg-gh-panel border-b border-gh-border">
-                                <span className="text-xs font-mono text-gray-400 flex items-center gap-2"><Icon name="terminal" size={12}/> Terminal Output</span>
-                                <div className="flex gap-2">
-                                    <button onClick={() => setLogs([])} className="hover:text-white text-gray-500"><Icon name="trash" size={14}/></button>
-                                    <button onClick={onClose} className="hover:text-white text-gray-500"><Icon name="x" size={14}/></button>
-                                </div>
-                            </div>
-                            <div className="flex-1 overflow-y-auto p-4 font-mono text-sm">
-                                {logs.length === 0 && <div className="opacity-30 italic">Ready to execute code...</div>}
-                                {logs.map((log, i) => (
-                                    <div key={i} className={`mb-1 break-words ${log.type === 'error' ? 'text-gh-danger' : log.type === 'info' ? 'text-blue-400' : 'text-green-400'}`}>
-                                        <span className="opacity-50 mr-2">[{new Date().toLocaleTimeString()}]</span>
-                                        {log.text}
-                                    </div>
-                                ))}
-                                <div ref={endRef}></div>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            );
-        };
-
+        // --- MAIN APP ---
         const App = () => {
-            // -- State --
-            const [markdown, setMarkdown] = useState(() => localStorage.getItem('polyglot_md') || "# Hello World\n\nWrite **Markdown** here.\n\n```js\nconsole.log('Hello from JS');\n```");
-            const [sidebarOpen, setSidebarOpen] = useState(true);
-            const [terminalOpen, setTerminalOpen] = useState(false);
-            const [zenMode, setZenMode] = useState(false);
-            const [splitPos, setSplitPos] = useState(50);
-            const [pyStatus, setPyStatus] = useState('Loading...');
+            const [markdown, setMarkdown] = useState("# Polyglot Notebook\n\nWrite Markdown, or try code blocks:\n\n```js\nconsole.log('Hello from JS!');\nconst x = 10;\nx * 2;\n```\n\n```py\nprint('Hello from Python!')\nimport numpy as np\narr = np.array([1, 2, 3])\narr * 2\n```");
+            const [split, setSplit] = useState(50);
+            const [logs, setLogs] = useState([]);
+            const [pyStatus, setPyStatus] = useState('Init...');
+            const [terminalOpen, setTerminalOpen] = useState(true);
             
-            // -- Refs --
-            const editorRef = useRef(null);
-            const previewRef = useRef(null);
-            const editorInstanceRef = useRef(null);
-            const isScrolling = useRef(false);
+            const editorRef = useRef(null); // Container
+            const monacoInstance = useRef(null);
+            const outputRef = useRef(null);
 
-            // -- Effects --
-            
-            // Auto Save
+            // 1. Initialize Pyodide
             useEffect(() => {
-                const t = setTimeout(() => localStorage.setItem('polyglot_md', markdown), 1000);
-                return () => clearTimeout(t);
-            }, [markdown]);
-
-            // Pyodide Init
-            useEffect(() => {
-                async function loadPy() {
+                const loadPy = async () => {
                     try {
-                        window.pyodide = await loadPyodide({
-                            indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/"
-                        });
-                        
-                        // Capture stdout/stderr
-                        window.pyodide.setStdout({ batched: (msg) => window.dispatchEvent(new CustomEvent('term-add', { detail: { type: 'log', text: msg } })) });
-                        window.pyodide.setStderr({ batched: (msg) => window.dispatchEvent(new CustomEvent('term-add', { detail: { type: 'error', text: msg } })) });
-                        
+                        window.pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/" });
+                        window.pyodide.setStdout({ batched: (t) => window.dispatchEvent(new CustomEvent('console-log', { detail: { type: 'log', text: t } })) });
+                        window.pyodide.setStderr({ batched: (t) => window.dispatchEvent(new CustomEvent('console-log', { detail: { type: 'error', text: t } })) });
+                        await window.pyodide.loadPackage("numpy");
                         setPyStatus('Ready');
-                    } catch (e) {
-                        setPyStatus('Error');
-                        console.error(e);
-                    }
-                }
+                    } catch (e) { setPyStatus('Error'); }
+                };
                 loadPy();
+                
+                // Remove loader
+                const loader = document.getElementById('loader');
+                if(loader) loader.style.opacity = '0';
+                setTimeout(() => loader?.remove(), 500);
 
-                const openTermHandler = () => setTerminalOpen(true);
-                window.addEventListener('open-term', openTermHandler);
-                return () => window.removeEventListener('open-term', openTermHandler);
+                // Listen for logs
+                const onLog = (e) => {
+                    setLogs(prev => [...prev, e.detail]);
+                    if (!terminalOpen) setTerminalOpen(true);
+                };
+                window.addEventListener('console-log', onLog);
+                return () => window.removeEventListener('console-log', onLog);
             }, []);
 
-            // Monaco Init
+            // 2. Initialize Monaco using RequireJS (Standard Way)
             useEffect(() => {
-                window.monaco_loader.init().then(monaco => {
-                    const el = document.getElementById('monaco-container');
-                    if (!el) return;
-
-                    const editor = monaco.editor.create(el, {
+                require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }});
+                require(['vs/editor/editor.main'], function() {
+                    const editor = monaco.editor.create(document.getElementById('monaco-host'), {
                         value: markdown,
                         language: 'markdown',
                         theme: 'vs-dark',
                         automaticLayout: true,
                         minimap: { enabled: false },
-                        wordWrap: 'on',
+                        padding: { top: 20 },
                         fontSize: 14,
-                        padding: { top: 20, bottom: 20 },
-                        fontFamily: "'SFMono-Regular', monospace"
+                        fontFamily: "Consolas, monospace"
                     });
-
-                    editorInstanceRef.current = editor;
-
+                    
+                    monacoInstance.current = editor;
+                    
                     editor.onDidChangeModelContent(() => {
-                        if (!isScrolling.current) {
-                            setMarkdown(editor.getValue());
-                        }
-                    });
-
-                    // Scroll Sync: Editor -> Preview
-                    editor.onDidScrollChange((e) => {
-                        if (isScrolling.current) return;
-                        isScrolling.current = true;
-                        
-                        const preview = previewRef.current;
-                        if (preview) {
-                            const ratio = e.scrollTop / (editor.getScrollHeight() - editor.getLayoutInfo().height);
-                            preview.scrollTop = ratio * (preview.scrollHeight - preview.clientHeight);
-                        }
-                        
-                        setTimeout(() => isScrolling.current = false, 50);
+                        setMarkdown(editor.getValue());
                     });
                 });
 
-                return () => {
-                    if (editorInstanceRef.current) editorInstanceRef.current.dispose();
-                }
+                return () => monacoInstance.current?.dispose();
             }, []);
 
-            // Scroll Sync: Preview -> Editor
-            const handlePreviewScroll = useCallback((e) => {
-                if (isScrolling.current || !editorInstanceRef.current) return;
-                isScrolling.current = true;
+            // 3. Markdown Parser Configuration
+            const mdHtml = React.useMemo(() => {
+                const md = window.markdownit({
+                    html: true,
+                    highlight: (str, lang) => {
+                        if (lang && window.hljs.getLanguage(lang)) {
+                            try { return window.hljs.highlight(str, { language: lang }).value; } catch (__) {}
+                        }
+                        return '';
+                    }
+                });
                 
-                const preview = e.target;
-                const ratio = preview.scrollTop / (preview.scrollHeight - preview.clientHeight);
-                const editor = editorInstanceRef.current;
-                
-                const editorScrollHeight = editor.getScrollHeight() - editor.getLayoutInfo().height;
-                editor.setScrollTop(ratio * editorScrollHeight);
+                // Override fence for run buttons
+                md.renderer.rules.fence = (tokens, idx) => {
+                    const token = tokens[idx];
+                    const code = token.content.trim();
+                    const lang = token.info.trim().split(/\s+/)[0];
+                    let highlighted = code;
+                    
+                    if (lang && window.hljs.getLanguage(lang)) {
+                        try { highlighted = window.hljs.highlight(code, { language: lang }).value; } catch (e) {}
+                    }
+                    
+                    const isRunnable = ['js', 'javascript', 'py', 'python'].includes(lang);
+                    const runBtn = isRunnable ? `<button class="run-btn" onclick="window.runSnippet('${lang.startsWith('py')?'py':'js'}', '${encodeURIComponent(code)}')">Run ▶</button>` : '';
+                    
+                    return `<div class="code-wrap">${runBtn}<pre class="hljs language-${lang}"><code>${highlighted}</code></pre></div>`;
+                };
 
-                setTimeout(() => isScrolling.current = false, 50);
-            }, []);
-
-            // Mermaid Render
-            useEffect(() => {
-                if (window.mermaid) {
-                    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
-                    // Give DOM a tick to update
-                    setTimeout(() => {
-                        mermaid.run({ querySelector: '.mermaid' });
-                    }, 100);
-                }
+                return md.render(markdown);
             }, [markdown]);
 
-            // Resizer Logic
-            const handleResize = (e) => {
-                const newPos = (e.clientX / window.innerWidth) * 100;
-                setSplitPos(Math.min(80, Math.max(20, newPos)));
-            };
+            // 4. Resize Logic
+            const startResize = useCallback((e) => {
+                e.preventDefault();
+                const onMove = (e) => setSplit(Math.min(80, Math.max(20, (e.clientX / window.innerWidth) * 100)));
+                const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+                window.addEventListener('mousemove', onMove);
+                window.addEventListener('mouseup', onUp);
+            }, []);
 
-            const startResizing = () => {
-                document.addEventListener('mousemove', handleResize);
-                document.addEventListener('mouseup', stopResizing);
-                document.body.style.userSelect = 'none';
-            };
-
-            const stopResizing = () => {
-                document.removeEventListener('mousemove', handleResize);
-                document.removeEventListener('mouseup', stopResizing);
-                document.body.style.userSelect = '';
-                if (editorInstanceRef.current) editorInstanceRef.current.layout();
-            };
-
-            // Actions
-            const handleFileOpen = async () => {
-                try {
-                    const [handle] = await window.showOpenFilePicker({ types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md', '.txt'] } }] });
-                    const file = await handle.getFile();
-                    const text = await file.text();
-                    setMarkdown(text);
-                    if (editorInstanceRef.current) editorInstanceRef.current.setValue(text);
-                } catch (e) { console.log('Open cancelled'); }
-            };
-
-            const handleFileSave = async () => {
+            // 5. File System Logic (Safe)
+            const saveFile = async () => {
+                if (!window.showSaveFilePicker) return alert("Use Chrome/Edge for File Access");
                 try {
                     const handle = await window.showSaveFilePicker({ suggestedName: 'notebook.md' });
                     const writable = await handle.createWritable();
                     await writable.write(markdown);
                     await writable.close();
-                } catch (e) { console.log('Save cancelled'); }
+                } catch(e) {}
             };
 
-            const exportPDF = () => {
-                const el = document.getElementById('preview-content');
-                const opt = {
-                    margin: 10,
-                    filename: 'notebook.pdf',
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, backgroundColor: '#ffffff' },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                };
-                
-                // Temp style change for PDF
-                const prevColor = el.style.color;
-                el.style.color = 'black';
-                html2pdf().set(opt).from(el).save().then(() => el.style.color = prevColor);
+            const openFile = async () => {
+                if (!window.showOpenFilePicker) return alert("Use Chrome/Edge for File Access");
+                try {
+                    const [handle] = await window.showOpenFilePicker();
+                    const file = await handle.getFile();
+                    const text = await file.text();
+                    monacoInstance.current.setValue(text); // Updates state via listener
+                } catch(e) {}
             };
 
-            // Stats
-            const wordCount = markdown.trim().split(/\s+/).filter(x => x).length;
-            const charCount = markdown.length;
+            // Auto-scroll terminal
+            useEffect(() => {
+                if (outputRef.current) outputRef.current.scrollTop = outputRef.current.scrollHeight;
+            }, [logs]);
 
             return (
-                <div className={`h-screen flex flex-col ${zenMode ? 'fixed inset-0 z-50 bg-gh-bg' : ''}`}>
+                <div className="h-screen flex flex-col bg-editor text-text">
                     {/* Toolbar */}
-                    {!zenMode && (
-                        <header className="h-12 border-b border-gh-border bg-gh-panel flex items-center justify-between px-4 shrink-0 select-none">
-                            <div className="flex items-center gap-4">
-                                <button onClick={() => setSidebarOpen(!sidebarOpen)} className={`p-1.5 rounded hover:bg-white/10 ${sidebarOpen ? 'text-gh-accent' : 'text-gray-400'}`}>
-                                    <Icon name="menu" />
-                                </button>
-                                <div className="font-bold text-gh-text flex items-center gap-2">
-                                    <Icon name="code" className="text-gh-accent" />
-                                    Polyglot Notebook
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button onClick={handleFileOpen} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-gh-border hover:bg-white/10 rounded transition">
-                                    <Icon name="folder" size={14}/> Open
-                                </button>
-                                <button onClick={handleFileSave} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-gh-success hover:bg-opacity-80 rounded transition text-white">
-                                    <Icon name="save" size={14}/> Save
-                                </button>
-                                <button onClick={exportPDF} className="p-1.5 text-gray-400 hover:text-white" title="Export PDF">
-                                    <Icon name="download" />
-                                </button>
-                                <button onClick={() => setZenMode(true)} className="p-1.5 text-gray-400 hover:text-white" title="Zen Mode">
-                                    <Icon name="maximize" />
-                                </button>
-                            </div>
-                        </header>
-                    )}
-
-                    {zenMode && (
-                        <button onClick={() => setZenMode(false)} className="absolute top-4 right-8 z-50 bg-gh-panel p-2 rounded-full border border-gh-border hover:text-white text-gray-400 shadow-xl">
-                            <Icon name="minimize" />
-                        </button>
-                    )}
-
-                    {/* Main Area */}
-                    <div className="flex-1 flex overflow-hidden">
-                        {!zenMode && <Sidebar markdown={markdown} isOpen={sidebarOpen} />}
-                        
-                        {/* Editor */}
-                        <div style={{ width: `${splitPos}%` }} className="h-full relative flex flex-col bg-[#1e1e1e]">
-                            <div id="monaco-container" className="absolute inset-0"></div>
+                    <div className="h-12 bg-panel border-b border-black flex items-center justify-between px-4 shrink-0">
+                        <div className="font-bold flex items-center gap-2">
+                            <span className="text-accent text-xl">❖</span> Polyglot IDE
                         </div>
-
-                        {/* Resizer */}
-                        <div className="resizer" onMouseDown={startResizing}></div>
-
-                        {/* Preview */}
-                        <div style={{ width: `${100 - splitPos}%` }} className="h-full flex flex-col relative bg-gh-bg">
-                            <div 
-                                ref={previewRef}
-                                onScroll={handlePreviewScroll}
-                                className="flex-1 overflow-y-auto p-8"
-                            >
-                                <div 
-                                    id="preview-content"
-                                    className="markdown-body"
-                                    dangerouslySetInnerHTML={{ __html: md.render(markdown) }}
-                                ></div>
+                        <div className="flex gap-2">
+                            <div className={`text-xs flex items-center px-3 rounded ${pyStatus==='Ready'?'bg-green-900 text-green-200':'bg-yellow-900 text-yellow-200'}`}>
+                                Python: {pyStatus}
                             </div>
-                            
-                            {/* Terminal Pane */}
-                            <Terminal isOpen={terminalOpen} onClose={() => setTerminalOpen(false)} />
+                            <button onClick={openFile} className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs text-white">Open</button>
+                            <button onClick={saveFile} className="px-3 py-1 bg-accent hover:bg-blue-600 rounded text-xs text-white">Save</button>
                         </div>
                     </div>
 
-                    {/* Status Bar */}
-                    <footer className="h-7 border-t border-gh-border bg-gh-panel flex items-center justify-between px-4 text-[11px] text-gray-500 select-none">
-                        <div className="flex gap-4">
-                            <span>Markdown</span>
-                            <span>{wordCount} Words</span>
-                            <span>{charCount} Chars</span>
+                    {/* Main Workspace */}
+                    <div className="flex-1 flex overflow-hidden">
+                        
+                        {/* Editor Pane */}
+                        <div style={{ width: `${split}%` }} className="relative flex flex-col">
+                            <div id="monaco-host" className="flex-1 w-full h-full"></div>
                         </div>
-                        <div className="flex gap-4 items-center">
-                            <div className="flex items-center gap-1.5">
-                                <div className={`w-2 h-2 rounded-full ${pyStatus === 'Ready' ? 'bg-gh-success' : pyStatus === 'Error' ? 'bg-gh-danger' : 'bg-yellow-500 animate-pulse'}`}></div>
-                                Pyodide: {pyStatus}
-                            </div>
-                            <button onClick={() => setTerminalOpen(!terminalOpen)} className="hover:text-gh-accent flex items-center gap-1">
-                                <Icon name="terminal" size={12}/> Console
-                            </button>
+
+                        {/* Resizer */}
+                        <div className="resizer" onMouseDown={startResize}></div>
+
+                        {/* Preview Pane */}
+                        <div style={{ width: `${100 - split}%` }} className="flex flex-col bg-[#111]">
+                            <div className="flex-1 overflow-y-auto markdown-body" dangerouslySetInnerHTML={{ __html: mdHtml }} />
+                            
+                            {/* Terminal */}
+                            {terminalOpen && (
+                                <div className="h-48 bg-black border-t border-gray-800 flex flex-col shrink-0">
+                                    <div className="flex justify-between items-center px-2 py-1 bg-[#1e1e1e] border-b border-black">
+                                        <span className="text-xs font-mono opacity-50">CONSOLE</span>
+                                        <button onClick={() => setLogs([])} className="text-xs text-red-400 hover:text-red-300">Clear</button>
+                                    </div>
+                                    <div ref={outputRef} className="flex-1 overflow-y-auto p-2 font-mono text-sm">
+                                        {logs.length === 0 && <span className="opacity-30 italic">Output will appear here...</span>}
+                                        {logs.map((l, i) => (
+                                            <div key={i} className={`mb-1 break-words ${l.type==='error'?'text-red-400':l.type==='system'?'text-blue-400':'text-green-400'}`}>
+                                                {l.text}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                    </footer>
+                    </div>
                 </div>
             );
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        root.render(
+            <ErrorBoundary>
+                <App />
+            </ErrorBoundary>
+        );
     </script>
 </body>
 </html>
