@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polyglot Notebook - Professional Markdown IDE</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        ghDark: { bg: '#0d1117', panel: '#161b22', border: '#30363d', text: '#c9d1d9', accent: '#58a6ff', hover: '#1f2428' }
+                    },
+                    fontFamily: {
+                        sans:,
+                        mono:
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Framer Motion -->
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+
+    <!-- Monaco Editor Loader -->
+    <script src="https://cdn.jsdelivr.net/npm/@monaco-editor/loader@1.4.0/lib/umd/monaco-loader.min.js"></script>
+
+    <!-- Markdown Parser & Highlight.js -->
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.2/dist/markdown-it.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+
+    <!-- KaTeX for Math -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-texmath@1.0.0/texmath.min.js"></script>
+
+    <!-- Mermaid.js -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+
+    <!-- Pyodide WebAssembly Python -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+
+    <!-- html2pdf -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        /* Base Styling & Scrollbars */
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background-color: #0d1117; color: #c9d1d9; }
+        
+        ::-webkit-scrollbar { width: 12px; height: 12px; }
+        ::-webkit-scrollbar-track { background: #0d1117; }
+        ::-webkit-scrollbar-thumb { background: #30363d; border: 3px solid #0d1117; border-radius: 6px; }
+        ::-webkit-scrollbar-thumb:hover { background: #484f58; }
+
+        .resizer { width: 4px; cursor: col-resize; background-color: #30363d; transition: background-color 0.2s; z-index: 10; }
+        .resizer:hover, .resizer:active { background-color: #58a6ff; }
+
+        /* GitHub Dark Markdown Body Extensions */
+        .markdown-body h1, .markdown-body h2 { border-bottom: 1px solid #30363d; padding-bottom: 0.3em; margin-top: 24px; margin-bottom: 16px; font-weight: 600; line-height: 1.25; }
+        .markdown-body h1 { font-size: 2em; } .markdown-body h2 { font-size: 1.5em; }
+        .markdown-body h3 { font-size: 1.25em; margin-top: 24px; margin-bottom: 16px; font-weight: 600; }
+        .markdown-body p, .markdown-body blockquote, .markdown-body ul, .markdown-body ol, .markdown-body dl, .markdown-body table, .markdown-body pre, .markdown-body details { margin-top: 0; margin-bottom: 16px; }
+        .markdown-body blockquote { padding: 0 1em; color: #8b949e; border-left: .25em solid #30363d; }
+        .markdown-body ul { list-style-type: disc; padding-left: 2em; }
+        .markdown-body ol { list-style-type: decimal; padding-left: 2em; }
+        .markdown-body code:not(.hljs) { padding: .2em .4em; margin: 0; font-size: 85%; background-color: rgba(110,118,129,0.4); border-radius: 6px; font-family: ui-monospace,SFMono-Regular,SF Mono,Menlo,Consolas,Liberation Mono,monospace; }
+        .markdown-body table { display: block; width: 100%; width: max-content; max-width: 100%; overflow: auto; border-spacing: 0; border-collapse: collapse; }
+        .markdown-body table th, .markdown-body table td { padding: 6px 13px; border: 1px solid #30363d; }
+        .markdown-body table tr { background-color: #0d1117; border-top: 1px solid #30363d; }
+        .markdown-body table tr:nth-child(2n) { background-color: #161b22; }
+        .markdown-body a { color: #58a6ff; text-decoration: none; }
+        .markdown-body a:hover { text-decoration: underline; }
+        .markdown-body .task-list-item { list-style-type: none; margin-left: -1.5em; }
+        
+        /* Interactive Code Blocks */
+        .code-block { position: relative; margin: 16px 0; border-radius: 6px; background-color: #0d1117; border: 1px solid #30363d; overflow: hidden; }
+        .code-block-header { height: 32px; background-color: #161b22; border-bottom: 1px solid #30363d; display: flex; align-items: center; padding: 0 12px; font-family: monospace; font-size: 12px; color: #8b949e; }
+        .code-block pre { margin: 0; padding: 16px; overflow: auto; background-color: #0d1117 !important; }
+        .run-btn { position: absolute; top: 4px; right: 8px; background-color: #238636; color: white; border: none; border-radius: 4px; padding: 2px 8px; font-size: 12px; font-weight: 500; cursor: pointer; opacity: 0; transition: opacity 0.2s, background-color 0.2s; display: flex; align-items: center; gap: 4px; }
+        .code-block:hover .run-btn { opacity: 1; }
+        .run-btn:hover { background-color: #2ea043; }
+
+        /* KaTeX & Mermaid Overrides */
+        .katex-display { overflow: auto hidden; padding-bottom: 8px; }
+        .mermaid-container { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 16px; display: flex; justify-content: center; margin: 16px 0; overflow-x: auto;}
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- Application Logic -->
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo, useCallback } = React;
+        const { motion, AnimatePresence } = window.Motion || { motion: { div: 'div', button: 'button' }, AnimatePresence: ({children}) => children };
+
+        // --- SVGs ---
+        const Icons = {
+            Sidebar: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>,
+            Code: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>,
+            Play: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>,
+            Terminal: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>,
+            FileUp: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><polyline points="9 15 12 12 15 15"></polyline></svg>,
+            Save: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>,
+            Download: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>,
+            Maximize: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>,
+            Minimize: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>,
+            Trash: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>,
+            X: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        };
+
+        // --- GLOBAL EXECUTION ENGINE ---
+        window.terminalLogs =[];
+        
+        window.runCode = async (lang, encodedCode) => {
+            const code = decodeURIComponent(encodedCode);
+            window.dispatchEvent(new CustomEvent('term-clear'));
+            window.dispatchEvent(new CustomEvent('term-open'));
+            
+            if (lang === 'js') {
+                const originalLog = console.log;
+                const originalError = console.error;
+                console.log = (...args) => {
+                    window.dispatchEvent(new CustomEvent('term-log', { detail: { type: 'log', text: args.join(' ') } }));
+                    originalLog(...args);
+                };
+                console.error = (...args) => {
+                    window.dispatchEvent(new CustomEvent('term-log', { detail: { type: 'error', text: args.join(' ') } }));
+                    originalError(...args);
+                };
+                try {
+                    let res = new Function(code)();
+                    if (res !== undefined) console.log('Result:', res);
+                } catch (e) {
+                    console.error(e.toString());
+                } finally {
+                    console.log = originalLog;
+                    console.error = originalError;
+                }
+            } else if (lang === 'py') {
+                if (!window.pyodideReady) {
+                    window.dispatchEvent(new CustomEvent('term-log', { detail: { type: 'error', text: 'Pyodide is loading, please wait...' } }));
+                    return;
+                }
+                try {
+                    await window.pyodideInstance.runPythonAsync(code);
+                } catch (e) {
+                    window.dispatchEvent(new CustomEvent('term-log', { detail: { type: 'error', text: e.toString() } }));
+                }
+            }
+        };
+
+        // --- MARKDOWN-IT SETUP ---
+        const md = window.markdownit({
+            html: true,
+            linkify: true,
+            typographer: true,
+        });
+
+        // Setup KaTeX
+        if (window.texmath && window.katex) {
+            md.use(window.texmath, { engine: window.katex, delimiters: 'dollars' });
+        }
+
+        // Custom Fence Renderer (Mermaid, Py, JS)
+        const defaultFence = md.renderer.rules.fence || function(t, i, o, e, s) { return s.renderToken(t, i, o); };
+        md.renderer.rules.fence = function (tokens, idx, options, env, self) {
+            const token = tokens;
+            const lang = token.info.trim();
+            const code = token.content;
+
+            if (lang === 'mermaid') {
+                return `<div class="mermaid-container"><div class="mermaid">${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div></div>`;
+            }
+
+            let highlighted = md.utils.escapeHtml(code);
+            if (window.hljs && lang && window.hljs.getLanguage(lang)) {
+                try { highlighted = window.hljs.highlight(code, { language: lang }).value; } catch (__) {}
+            }
+
+            let runBtn = '';
+            if (.includes(lang)) {
+                const exeLang = lang.startsWith('py') ? 'py' : 'js';
+                runBtn = `<button class="run-btn" onclick="window.runCode('${exeLang}', '${encodeURIComponent(code)}')">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            Run
+                          </button>`;
+            }
+
+            return `<div class="code-block group">
+                        <div class="code-block-header">${lang || 'text'}</div>
+                        ${runBtn}
+                        <pre><code class="hljs language-${lang}">${highlighted}</code></pre>
+                    </div>`;
+        };
+
+        // Custom Heading Renderer for Anchors
+        md.renderer.rules.heading_open = function(tokens, idx, options, env, self) {
+            const token = tokens;
+            const textToken = tokens;
+            if (textToken && textToken.content) {
+                const id = textToken.content.toLowerCase().replace(/+/g, '-');
+                return `<${token.tag} id="${id}" class="group relative flex items-center cursor-pointer hover:text-ghDark-accent transition-colors">`;
+            }
+            return `<${token.tag}>`;
+        };
+
+        // Render Checkboxes
+        const renderMarkdown = (text) => {
+            let html = md.render(text);
+            html = html.replace(/<li>\/g, '<li class="task-list-item"><input type="checkbox" disabled class="mr-2"/>')
+                       .replace(/<li>\/gi, '<li class="task-list-item"><input type="checkbox" checked disabled class="mr-2"/>');
+            return html;
+        };
+
+
+        // --- COMPONENTS ---
+
+        const Sidebar = ({ markdown, isOpen, toggleSidebar }) => {
+            const headings = useMemo(() => {
+                const lines = markdown.split('\n');
+                const out =[];
+                lines.forEach(line => {
+                    const match = line.match(/^(#{1,6})\s+(.*)/);
+                    if (match) {
+                        out.push({
+                            level: match.length,
+                            text: match,
+                            id: match.toLowerCase().replace(/+/g, '-')
+                        });
+                    }
+                });
+                return out;
+            },);
+
+            const scrollToId = (id) => {
+                const el = document.getElementById(id);
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+            };
+
+            return (
+                <AnimatePresence>
+                    {isOpen && (
+                        <motion.div 
+                            initial={{ width: 0, opacity: 0 }}
+                            animate={{ width: 250, opacity: 1 }}
+                            exit={{ width: 0, opacity: 0 }}
+                            className="bg-ghDark-panel border-r border-ghDark-border flex flex-col overflow-hidden shrink-0"
+                        >
+                            <div className="p-4 border-b border-ghDark-border flex justify-between items-center bg-ghDark-panel sticky top-0">
+                                <span className="font-semibold text-sm text-ghDark-text flex items-center gap-2">
+                                    <Icons.Sidebar /> Outline
+                                </span>
+                            </div>
+                            <div className="p-2 overflow-y-auto flex-1">
+                                {headings.length === 0 && <p className="text-xs text-gray-500 p-2">No headings found.</p>}
+                                {headings.map((h, i) => (
+                                    <div 
+                                        key={i} 
+                                        onClick={() => scrollToId(h.id)}
+                                        className="text-sm py-1 px-2 hover:bg-ghDark-border rounded cursor-pointer truncate text-gray-400 hover:text-gray-200 transition-colors"
+                                        style={{ paddingLeft: `${(h.level - 1) * 12 + 8}px` }}
+                                        title={h.text}
+                                    >
+                                        {h.text}
+                                    </div>
+                                ))}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            );
+        };
+
+        const TerminalPane = ({ isOpen, onClose }) => {
+            const = useState([]);
+            const endRef = useRef(null);
+
+            useEffect(() => {
+                const onLog = (e) => setLogs(l =>);
+                const onClear = () => setLogs([]);
+                window.addEventListener('term-log', onLog);
+                window.addEventListener('term-clear', onClear);
+                return () => {
+                    window.removeEventListener('term-log', onLog);
+                    window.removeEventListener('term-clear', onClear);
+                };
+            },[]);
+
+            useEffect(() => {
+                if (endRef.current) endRef.current.scrollIntoView({ behavior: 'smooth' });
+            },);
+
+            return (
+                <AnimatePresence>
+                    {isOpen && (
+                        <motion.div 
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 250, opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="absolute bottom-0 left-0 w-full bg-ghDark-panel border-t border-ghDark-border z-20 flex flex-col shadow-lg"
+                        >
+                            <div className="flex justify-between items-center p-2 border-b border-ghDark-border bg-">
+                                <span className="font-mono text-xs flex items-center gap-2 text-gray-400">
+                                    <Icons.Terminal /> OUTPUT
+                                </span>
+                                <div className="flex gap-2">
+                                    <button onClick={() => setLogs([])} className="p-1 hover:bg-ghDark-border rounded text-gray-400 hover:text-white" title="Clear">
+                                        <Icons.Trash />
+                                    </button>
+                                    <button onClick={onClose} className="p-1 hover:bg-ghDark-border rounded text-gray-400 hover:text-white" title="Close">
+                                        <Icons.X />
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4 font-mono text-sm bg-black/50">
+                                {logs.length === 0 && <div className="text-gray-600 italic">No output...</div>}
+                                {logs.map((l, i) => (
+                                    <div key={i} className={`mb-1 whitespace-pre-wrap ${l.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>
+                                        {l.text}
+                                    </div>
+                                ))}
+                                <div ref={endRef} />
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            );
+        };
+
+        const EditorPane = ({ markdown, setMarkdown, width, editorRef }) => {
+            const containerRef = useRef(null);
+
+            useEffect(() => {
+                if (!containerRef.current) return;
+                window.monaco_loader.init().then(monaco => {
+                    const editor = monaco.editor.create(containerRef.current, {
+                        value: markdown,
+                        language: 'markdown',
+                        theme: 'vs-dark',
+                        automaticLayout: true,
+                        minimap: { enabled: true },
+                        wordWrap: 'on',
+                        fontSize: 14,
+                        fontFamily: "'Fira Code', 'ui-monospace', monospace",
+                        padding: { top: 16 }
+                    });
+                    
+                    editorRef.current = editor;
+
+                    editor.onDidChangeModelContent(() => {
+                        setMarkdown(editor.getValue());
+                    });
+                });
+
+                return () => {
+                    if (editorRef.current) editorRef.current.dispose();
+                };
+            },[]);
+
+            // External sync
+            useEffect(() => {
+                if (editorRef.current && editorRef.current.getValue() !== markdown) {
+                    const pos = editorRef.current.getPosition();
+                    editorRef.current.setValue(markdown);
+                    editorRef.current.setPosition(pos);
+                }
+            },);
+
+            return (
+                <div style={{ width: `${width}%` }} className="h-full relative flex flex-col shrink-0 border-r border-ghDark-border bg-">
+                    <div ref={containerRef} className="flex-1 w-full h-full" />
+                </div>
+            );
+        };
+
+        const PreviewPane = ({ markdown, previewRef }) => {
+            const htmlContent = useMemo(() => renderMarkdown(markdown),);
+
+            useEffect(() => {
+                // Initialize Mermaid after render
+                try {
+                    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+                    const nodes = document.querySelectorAll('.mermaid');
+                    nodes.forEach(async (node, i) => {
+                        if (node.getAttribute('data-processed')) return;
+                        try {
+                            const id = `mermaid-${Date.now()}-${i}`;
+                            const { svg } = await mermaid.render(id, node.textContent);
+                            node.innerHTML = svg;
+                            node.setAttribute('data-processed', 'true');
+                        } catch (e) {
+                            node.innerHTML = `<span style="color:red">Mermaid Syntax Error</span>`;
+                        }
+                    });
+                } catch (e) { console.error('Mermaid render error', e); }
+            },);
+
+            return (
+                <div 
+                    ref={previewRef}
+                    className="flex-1 h-full overflow-y-auto p-8 relative bg-"
+                >
+                    <div 
+                        id="preview-content"
+                        className="markdown-body max-w-4xl mx-auto" 
+                        dangerouslySetInnerHTML={{ __html: htmlContent }} 
+                    />
+                </div>
+            );
+        };
+
+        const App = () => {
+            const = useState(() => localStorage.getItem('polyglot-md') || '# Welcome to Polyglot Notebook\n\nStart typing **Markdown**...\n\n```js\nconsole.log("Hello WebAssembly!");\n```');
+            const = useState(50);
+            const = useState(true);
+            const = useState(false);
+            const = useState(false);
+            const = useState('Loading...');
+            
+            const editorRef = useRef(null);
+            const previewRef = useRef(null);
+            const isScrollingRef = useRef(false);
+
+            // Auto-Save
+            useEffect(() => {
+                const timer = setTimeout(() => localStorage.setItem('polyglot-md', markdown), 1000);
+                return () => clearTimeout(timer);
+            },);
+
+            // Pyodide Init
+            useEffect(() => {
+                async function initPy() {
+                    try {
+                        window.pyodideInstance = await window.loadPyodide({
+                            indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/'
+                        });
+                        window.pyodideInstance.setStdout({ batched: (str) => window.dispatchEvent(new CustomEvent('term-log', {detail: {type:'log', text:str}})) });
+                        window.pyodideInstance.setStderr({ batched: (str) => window.dispatchEvent(new CustomEvent('term-log', {detail: {type:'error', text:str}})) });
+                        window.pyodideReady = true;
+                        setPyStatus('Ready');
+                    } catch (e) {
+                        setPyStatus('Failed');
+                    }
+                }
+                initPy();
+
+                const openTerm = () => setTerminalOpen(true);
+                window.addEventListener('term-open', openTerm);
+                return () => window.removeEventListener('term-open', openTerm);
+            },[]);
+
+            // Scroll Sync Logic
+            useEffect(() => {
+                let animationFrameId;
+                
+                const handleEditorScroll = () => {
+                    if (isScrollingRef.current) return;
+                    if (!editorRef.current || !previewRef.current) return;
+                    
+                    const editor = editorRef.current;
+                    const preview = previewRef.current;
+                    
+                    const scrollHeight = editor.getScrollHeight() - editor.getLayoutInfo().height;
+                    const scrollTop = editor.getScrollTop();
+                    const pct = scrollHeight > 0 ? scrollTop / scrollHeight : 0;
+                    
+                    const prevMax = preview.scrollHeight - preview.clientHeight;
+                    
+                    isScrollingRef.current = true;
+                    preview.scrollTop = pct * prevMax;
+                    
+                    clearTimeout(animationFrameId);
+                    animationFrameId = setTimeout(() => { isScrollingRef.current = false; }, 50);
+                };
+
+                const handlePreviewScroll = () => {
+                    if (isScrollingRef.current) return;
+                    if (!editorRef.current || !previewRef.current) return;
+                    
+                    const editor = editorRef.current;
+                    const preview = previewRef.current;
+                    
+                    const prevMax = preview.scrollHeight - preview.clientHeight;
+                    const pct = prevMax > 0 ? preview.scrollTop / prevMax : 0;
+                    
+                    const scrollHeight = editor.getScrollHeight() - editor.getLayoutInfo().height;
+                    
+                    isScrollingRef.current = true;
+                    editor.setScrollTop(pct * scrollHeight);
+                    
+                    clearTimeout(animationFrameId);
+                    animationFrameId = setTimeout(() => { isScrollingRef.current = false; }, 50);
+                };
+
+                // Monaco scroll event binds inside its own container usually, 
+                // but we attach later when it's ready.
+                const interval = setInterval(() => {
+                    if (editorRef.current) {
+                        editorRef.current.onDidScrollChange(handleEditorScroll);
+                        clearInterval(interval);
+                    }
+                }, 500);
+
+                const prevEl = previewRef.current;
+                if (prevEl) prevEl.addEventListener('scroll', handlePreviewScroll);
+
+                return () => {
+                    clearInterval(interval);
+                    if (prevEl) prevEl.removeEventListener('scroll', handlePreviewScroll);
+                };
+            },[]);
+
+            // Resizer Logic
+            const handleMouseDown = (e) => {
+                e.preventDefault();
+                const startX = e.clientX;
+                const startWidth = leftWidth;
+                
+                const onMouseMove = (e) => {
+                    const delta = e.clientX - startX;
+                    const newPct = startWidth + (delta / window.innerWidth) * 100;
+                    setLeftWidth(Math.max(20, Math.min(newPct, 80)));
+                };
+                
+                const onMouseUp = () => {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                    // tell monaco to relayout
+                    if (editorRef.current) setTimeout(() => editorRef.current.layout(), 100);
+                };
+                
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            };
+
+            // Actions
+            const handleOpen = async () => {
+                try {
+                    const = await window.showOpenFilePicker({ types:} }] });
+                    const file = await fileHandle.getFile();
+                    const content = await file.text();
+                    setMarkdown(content);
+                } catch (e) { console.log('Open cancelled', e); }
+            };
+
+            const handleSave = async () => {
+                try {
+                    const fileHandle = await window.showSaveFilePicker({ types:} }], suggestedName: 'notebook.md' });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(markdown);
+                    await writable.close();
+                } catch (e) { console.log('Save cancelled', e); }
+            };
+
+            const handlePdfExport = () => {
+                const element = document.getElementById('preview-content');
+                const opt = {
+                    margin: 10,
+                    filename: 'notebook.pdf',
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, windowWidth: 1024 },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+                
+                // Force white background for PDF
+                const originalBg = element.style.backgroundColor;
+                const originalColor = element.style.color;
+                element.style.backgroundColor = '#ffffff';
+                element.style.color = '#000000';
+                
+                html2pdf().set(opt).from(element).save().then(() => {
+                    element.style.backgroundColor = originalBg;
+                    element.style.color = originalColor;
+                });
+            };
+
+            const handleHtmlExport = () => {
+                const html = renderMarkdown(markdown);
+                const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Export</title><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"><style>body{font-family:sans-serif;max-width:800px;margin:0 auto;padding:2rem;}pre{background:#f6f8fa;padding:16px;border-radius:6px;}</style></head><body>${html}</body></html>`;
+                const blob = new Blob(, { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'notebook.html';
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+
+            // Stats
+            const words = markdown.trim().split(/\s+/).filter(w => w.length > 0).length;
+            const chars = markdown.length;
+
+            return (
+                <div className="flex flex-col h-screen text-gray-200 bg-ghDark-bg font-sans">
+                    
+                    {/* Toolbar */}
+                    {!zenMode && (
+                        <div className="h-12 border-b border-ghDark-border flex items-center justify-between px-4 bg-ghDark-panel shrink-0 select-none">
+                            <div className="flex items-center gap-4">
+                                <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1.5 rounded hover:bg-ghDark-border text-gray-400 hover:text-white transition-colors">
+                                    <Icons.Sidebar />
+                                </button>
+                                <div className="font-bold text-sm tracking-wide text-white flex items-center gap-2">
+                                    <Icons.Code />
+                                    Polyglot <span className="text-ghDark-accent font-normal">Notebook</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button onClick={handleOpen} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded hover:bg-ghDark-border text-gray-300 hover:text-white transition-colors" title="Open Local File">
+                                    <Icons.FileUp /> Open
+                                </button>
+                                <button onClick={handleSave} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded hover:bg-ghDark-border text-gray-300 hover:text-white transition-colors" title="Save to File">
+                                    <Icons.Save /> Save
+                                </button>
+                                <div className="h-4 w-px bg-ghDark-border mx-1"></div>
+                                <button onClick={handlePdfExport} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded hover:bg-ghDark-border text-gray-300 hover:text-white transition-colors" title="Export PDF">
+                                    <Icons.Download /> PDF
+                                </button>
+                                <button onClick={handleHtmlExport} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded hover:bg-ghDark-border text-gray-300 hover:text-white transition-colors" title="Export HTML">
+                                    <Icons.Download /> HTML
+                                </button>
+                                <div className="h-4 w-px bg-ghDark-border mx-1"></div>
+                                <button onClick={() => setZenMode(true)} className="p-1.5 rounded hover:bg-ghDark-border text-gray-400 hover:text-white transition-colors" title="Zen Mode">
+                                    <Icons.Maximize />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {zenMode && (
+                        <button onClick={() => setZenMode(false)} className="absolute top-4 right-4 z-50 p-2 bg-ghDark-panel border border-ghDark-border rounded-full hover:bg-gray-800 text-gray-400 hover:text-white shadow-lg transition-colors" title="Exit Zen Mode">
+                            <Icons.Minimize />
+                        </button>
+                    )}
+
+                    {/* Main Workspace */}
+                    <div className="flex flex-1 overflow-hidden relative">
+                        {!zenMode && <Sidebar markdown={markdown} isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />}
+                        
+                        <EditorPane markdown={markdown} setMarkdown={setMarkdown} width={leftWidth} editorRef={editorRef} />
+                        
+                        <div className="resizer flex justify-center items-center" onMouseDown={handleMouseDown}>
+                            <div className="w-0.5 h-8 bg-gray-600 rounded"></div>
+                        </div>
+                        
+                        <div className="flex-1 flex flex-col relative min-w-0" style={{ width: `${100 - leftWidth}%` }}>
+                            <PreviewPane markdown={markdown} previewRef={previewRef} />
+                            <TerminalPane isOpen={terminalOpen} onClose={() => setTerminalOpen(false)} />
+                        </div>
+                    </div>
+
+                    {/* Status Bar */}
+                    <div className="h-7 border-t border-ghDark-border flex items-center justify-between px-4 bg- text- text-gray-500 shrink-0 font-mono select-none">
+                        <div className="flex items-center gap-4">
+                            <span>{words} words</span>
+                            <span>{chars} characters</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-1">
+                                <span className={`w-2 h-2 rounded-full ${pyStatus === 'Ready' ? 'bg-green-500' : pyStatus === 'Failed' ? 'bg-red-500' : 'bg-yellow-500 animate-pulse'}`}></span>
+                                Pyodide: {pyStatus}
+                            </div>
+                            <button onClick={() => setTerminalOpen(!terminalOpen)} className="hover:text-gray-300 flex items-center gap-1 cursor-pointer transition-colors">
+                                <Icons.Terminal /> Terminal
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
