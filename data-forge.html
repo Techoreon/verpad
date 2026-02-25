@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Converter | CSV ↔ JSON</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Custom Scrollbar */
+        textarea::-webkit-scrollbar { width: 10px; height: 10px; }
+        textarea::-webkit-scrollbar-track { background: #18181b; }
+        textarea::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 5px; border: 2px solid #18181b; }
+        textarea::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+        /* Glassmorphism Utilities */
+        .glass {
+            background: rgba(39, 39, 42, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Animation for Toast */
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .toast-enter { animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+        /* Drag Overlay */
+        .drag-active { border-color: #6366f1 !important; background: rgba(99, 102, 241, 0.1) !important; }
+    </style>
+</head>
+<body class="bg-[#09090b] text-zinc-300 h-screen flex flex-col overflow-hidden selection:bg-indigo-500 selection:text-white">
+
+    <!-- Background Gradients -->
+    <div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
+        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-900/20 rounded-full blur-[120px]"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-fuchsia-900/20 rounded-full blur-[120px]"></div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="h-16 border-b border-zinc-800 flex items-center justify-between px-6 bg-[#09090b]/80 backdrop-blur-md z-10">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-fuchsia-600 flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/20">
+                &lt;&gt;
+            </div>
+            <h1 class="text-lg font-bold text-white tracking-tight">Data<span class="text-indigo-400">Forge</span></h1>
+        </div>
+        
+        <div class="flex items-center gap-4 text-sm">
+            <!-- Settings Bar -->
+            <div class="hidden md:flex items-center gap-4 bg-zinc-900/50 px-4 py-1.5 rounded-full border border-zinc-800">
+                <div class="flex items-center gap-2">
+                    <label class="text-zinc-500 text-xs font-semibold uppercase">Delimiter</label>
+                    <select id="delimiter" class="bg-transparent text-white focus:outline-none cursor-pointer">
+                        <option value=",">Comma (,)</option>
+                        <option value=";">Semicolon (;)</option>
+                        <option value="tab">Tab (\t)</option>
+                        <option value="|">Pipe (|)</option>
+                    </select>
+                </div>
+                <div class="w-px h-4 bg-zinc-700"></div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="flattenJson" checked class="accent-indigo-500 cursor-pointer">
+                    <label for="flattenJson" class="cursor-pointer select-none">Flatten Nested JSON</label>
+                </div>
+                <div class="w-px h-4 bg-zinc-700"></div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="prettifyJson" checked class="accent-indigo-500 cursor-pointer">
+                    <label for="prettifyJson" class="cursor-pointer select-none">Prettify JSON</label>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 flex flex-col md:flex-row p-4 gap-4 overflow-hidden relative">
+        
+        <!-- LEFT PANEL (CSV) -->
+        <section class="flex-1 flex flex-col glass rounded-xl overflow-hidden shadow-2xl transition-all duration-300 relative group" id="csvDropZone">
+            <!-- Panel Header -->
+            <div class="h-12 border-b border-zinc-700/50 bg-zinc-900/30 flex items-center justify-between px-4">
+                <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full bg-orange-500"></div>
+                    <span class="font-semibold text-white">CSV / Text</span>
+                </div>
+                <div class="flex gap-1">
+                    <button onclick="triggerUpload('csv')" class="p-2 hover:bg-zinc-700 rounded-md text-zinc-400 hover:text-white transition" title="Upload File">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    </button>
+                    <button onclick="copyToClipboard('csvInput')" class="p-2 hover:bg-zinc-700 rounded-md text-zinc-400 hover:text-white transition" title="Copy">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    </button>
+                    <button onclick="downloadFile('csv')" class="p-2 hover:bg-zinc-700 rounded-md text-zinc-400 hover:text-white transition" title="Download">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    </button>
+                    <button onclick="clearPanel('csv')" class="p-2 hover:bg-red-500/20 hover:text-red-400 rounded-md text-zinc-500 transition" title="Clear">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Editor -->
+            <div class="relative flex-1 flex flex-col">
+                <textarea id="csvInput" spellcheck="false" 
+                    class="flex-1 w-full bg-transparent p-4 font-mono text-sm leading-relaxed focus:outline-none resize-none placeholder-zinc-700"
+                    placeholder="Drag CSV file here or paste content...&#10;id,name,email&#10;1,John Doe,john@example.com"></textarea>
+                
+                <!-- Overlay for Drag -->
+                <div id="csvOverlay" class="absolute inset-0 bg-indigo-500/10 backdrop-blur-sm hidden flex-col items-center justify-center border-2 border-indigo-500 border-dashed m-2 rounded-lg pointer-events-none">
+                    <p class="text-indigo-400 font-bold text-xl">Drop CSV File Here</p>
+                </div>
+            </div>
+
+            <!-- Footer Stats -->
+            <div class="h-8 bg-zinc-900/50 border-t border-zinc-800 flex items-center justify-between px-4 text-xs text-zinc-500">
+                <span id="csvStats">0 lines • 0 KB</span>
+                <span class="uppercase tracking-wider">Input</span>
+            </div>
+        </section>
+
+
+        <!-- CENTER CONTROLS -->
+        <div class="flex md:flex-col justify-center gap-4 items-center shrink-0 z-20">
+            <button id="toJSON" class="group relative flex items-center justify-center w-12 h-12 md:w-14 md:h-14 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg shadow-indigo-600/30 transition-all active:scale-95">
+                <svg class="w-6 h-6 md:rotate-0 rotate-90 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                <span class="absolute -top-10 bg-zinc-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none">CSV to JSON</span>
+            </button>
+
+            <button id="toCSV" class="group relative flex items-center justify-center w-12 h-12 md:w-14 md:h-14 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded-xl shadow-lg shadow-fuchsia-600/30 transition-all active:scale-95">
+                <svg class="w-6 h-6 md:rotate-0 rotate-90 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                <span class="absolute -bottom-10 md:top-auto md:bottom-auto md:left-[-90px] bg-zinc-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap pointer-events-none">JSON to CSV</span>
+            </button>
+        </div>
+
+
+        <!-- RIGHT PANEL (JSON) -->
+        <section class="flex-1 flex flex-col glass rounded-xl overflow-hidden shadow-2xl transition-all duration-300 relative group" id="jsonDropZone">
+            <!-- Panel Header -->
+            <div class="h-12 border-b border-zinc-700/50 bg-zinc-900/30 flex items-center justify-between px-4">
+                <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+                    <span class="font-semibold text-white">JSON / Object</span>
+                </div>
+                <div class="flex gap-1">
+                    <button onclick="triggerUpload('json')" class="p-2 hover:bg-zinc-700 rounded-md text-zinc-400 hover:text-white transition" title="Upload File">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    </button>
+                    <button onclick="copyToClipboard('jsonInput')" class="p-2 hover:bg-zinc-700 rounded-md text-zinc-400 hover:text-white transition" title="Copy">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    </button>
+                    <button onclick="downloadFile('json')" class="p-2 hover:bg-zinc-700 rounded-md text-zinc-400 hover:text-white transition" title="Download">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    </button>
+                    <button onclick="clearPanel('json')" class="p-2 hover:bg-red-500/20 hover:text-red-400 rounded-md text-zinc-500 transition" title="Clear">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Editor -->
+            <div class="relative flex-1 flex flex-col">
+                <textarea id="jsonInput" spellcheck="false" 
+                    class="flex-1 w-full bg-transparent p-4 font-mono text-sm leading-relaxed focus:outline-none resize-none placeholder-zinc-700"
+                    placeholder='Drag JSON file here...&#10;[&#10;  { "id": 1, "name": "John" }&#10;]'></textarea>
+                
+                <!-- Overlay for Drag -->
+                <div id="jsonOverlay" class="absolute inset-0 bg-emerald-500/10 backdrop-blur-sm hidden flex-col items-center justify-center border-2 border-emerald-500 border-dashed m-2 rounded-lg pointer-events-none">
+                    <p class="text-emerald-400 font-bold text-xl">Drop JSON File Here</p>
+                </div>
+            </div>
+
+            <!-- Footer Stats -->
+            <div class="h-8 bg-zinc-900/50 border-t border-zinc-800 flex items-center justify-between px-4 text-xs text-zinc-500">
+                <span id="jsonStats">0 items • 0 KB</span>
+                <span class="uppercase tracking-wider">Output</span>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Hidden File Inputs -->
+    <input type="file" id="fileCsv" accept=".csv,.txt" class="hidden">
+    <input type="file" id="fileJson" accept=".json" class="hidden">
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed bottom-6 right-6 flex flex-col gap-3 z-50"></div>
+
+    <script>
+        // --- DOM Elements ---
+        const csvInput = document.getElementById('csvInput');
+        const jsonInput = document.getElementById('jsonInput');
+        const delimiterSelect = document.getElementById('delimiter');
+        const flattenCheck = document.getElementById('flattenJson');
+        const prettifyCheck = document.getElementById('prettifyJson');
+
+        // --- Configuration ---
+        const getDelimiter = () => {
+            const val = delimiterSelect.value;
+            return val === 'tab' ? '\t' : val;
+        };
+
+        // --- Core: CSV to JSON ---
+        document.getElementById('toJSON').addEventListener('click', () => {
+            const raw = csvInput.value.trim();
+            if (!raw) return showToast('Input is empty', 'error');
+
+            try {
+                const sep = getDelimiter();
+                const rows = raw.split(/\r?\n/);
+                if (rows.length < 2) throw new Error("CSV requires a header and data row");
+
+                const headers = parseCSVLine(rows[0], sep);
+                const result = [];
+
+                for (let i = 1; i < rows.length; i++) {
+                    const line = rows[i].trim();
+                    if (!line) continue;
+                    
+                    const values = parseCSVLine(line, sep);
+                    const obj = {};
+                    
+                    headers.forEach((h, idx) => {
+                        const val = values[idx];
+                        // Basic auto-typing
+                        if (val !== undefined && val !== "") {
+                            // Assign nested property if header contains dot (user.name)
+                            assignNested(obj, h, autoType(val));
+                        }
+                    });
+                    result.push(obj);
+                }
+
+                const space = prettifyCheck.checked ? 2 : 0;
+                jsonInput.value = JSON.stringify(result, null, space);
+                showToast('Converted CSV to JSON successfully', 'success');
+                updateStats();
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        });
+
+        // --- Core: JSON to CSV ---
+        document.getElementById('toCSV').addEventListener('click', () => {
+            const raw = jsonInput.value.trim();
+            if (!raw) return showToast('Input is empty', 'error');
+
+            try {
+                let data = JSON.parse(raw);
+                if (!Array.isArray(data)) data = [data]; // Handle single object
+                if (data.length === 0) throw new Error("JSON array is empty");
+
+                // Flatten objects if requested
+                if (flattenCheck.checked) {
+                    data = data.map(item => flattenObject(item));
+                }
+
+                // Get all unique keys (headers)
+                const headers = Array.from(new Set(
+                    data.reduce((acc, obj) => acc.concat(Object.keys(obj)), [])
+                ));
+
+                const sep = getDelimiter();
+                const csvRows = [headers.join(sep)];
+
+                data.forEach(obj => {
+                    const row = headers.map(header => {
+                        return escapeCSV(obj[header], sep);
+                    });
+                    csvRows.push(row.join(sep));
+                });
+
+                csvInput.value = csvRows.join('\n');
+                showToast('Converted JSON to CSV successfully', 'success');
+                updateStats();
+            } catch (e) {
+                showToast('Invalid JSON: ' + e.message, 'error');
+            }
+        });
+
+        // --- Helpers: Parsing ---
+        
+        // Handles "quoted, values" and custom delimiters
+        function parseCSVLine(text, sep) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const nextChar = text[i+1];
+
+                if (char === '"') {
+                    if (inQuotes && nextChar === '"') {
+                        current += '"';
+                        i++; // Skip escaped quote
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === sep && !inQuotes) {
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current);
+            return result;
+        }
+
+        function escapeCSV(val, sep) {
+            if (val === null || val === undefined) return '';
+            let str = typeof val === 'object' ? JSON.stringify(val) : String(val);
+            // If contains delimiter, quote, or newline, wrap in quotes
+            if (str.includes(sep) || str.includes('"') || str.includes('\n')) {
+                return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+        }
+
+        function autoType(val) {
+            if (!isNaN(Number(val)) && val.trim() !== '') return Number(val);
+            if (val.toLowerCase() === 'true') return true;
+            if (val.toLowerCase() === 'false') return false;
+            if (val === 'null') return null;
+            return val;
+        }
+
+        // --- Helpers: Flattening / Nesting ---
+
+        // { "user.name": "John" } -> { user: { name: "John" } }
+        function assignNested(obj, path, value) {
+            const keys = path.split('.');
+            let current = obj;
+            for (let i = 0; i < keys.length - 1; i++) {
+                const key = keys[i];
+                if (!current[key]) current[key] = {};
+                current = current[key];
+            }
+            current[keys[keys.length - 1]] = value;
+        }
+
+        // { user: { name: "John" } } -> { "user.name": "John" }
+        function flattenObject(obj, prefix = '', res = {}) {
+            for (const key in obj) {
+                if (!obj.hasOwnProperty(key)) continue;
+                const val = obj[key];
+                const newKey = prefix ? `${prefix}.${key}` : key;
+                
+                if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+                    flattenObject(val, newKey, res);
+                } else {
+                    res[newKey] = val;
+                }
+            }
+            return res;
+        }
+
+        // --- UI Logic: Drag & Drop ---
+        const setupDrag = (zoneId, inputId, overlayId) => {
+            const zone = document.getElementById(zoneId);
+            const input = document.getElementById(inputId);
+            const overlay = document.getElementById(overlayId);
+
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                overlay.classList.remove('hidden');
+                overlay.classList.add('flex');
+                zone.classList.add('drag-active');
+            });
+
+            const leave = () => {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
+                zone.classList.remove('drag-active');
+            };
+
+            zone.addEventListener('dragleave', leave);
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                leave();
+                
+                if (e.dataTransfer.files.length) {
+                    const file = e.dataTransfer.files[0];
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        input.value = ev.target.result;
+                        updateStats();
+                        showToast(`Loaded ${file.name}`, 'info');
+                    };
+                    reader.readAsText(file);
+                }
+            });
+        };
+
+        setupDrag('csvDropZone', 'csvInput', 'csvOverlay');
+        setupDrag('jsonDropZone', 'jsonInput', 'jsonOverlay');
+
+        // --- UI Logic: File Upload Button ---
+        function triggerUpload(type) {
+            const input = document.getElementById(type === 'csv' ? 'fileCsv' : 'fileJson');
+            input.click();
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    document.getElementById(type + 'Input').value = ev.target.result;
+                    updateStats();
+                    showToast(`Loaded ${file.name}`, 'info');
+                    input.value = ''; // Reset
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        // --- UI Logic: Stats & Feedback ---
+        
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function updateStats() {
+            // CSV Stats
+            const csvVal = csvInput.value;
+            const csvLines = csvVal ? csvVal.split('\n').length : 0;
+            document.getElementById('csvStats').textContent = `${csvLines} lines • ${formatBytes(new Blob([csvVal]).size)}`;
+
+            // JSON Stats
+            const jsonVal = jsonInput.value;
+            let itemCount = 0;
+            try {
+                if(jsonVal) {
+                    const parsed = JSON.parse(jsonVal);
+                    itemCount = Array.isArray(parsed) ? parsed.length : 1;
+                }
+            } catch(e) {}
+            document.getElementById('jsonStats').textContent = `${itemCount} objects • ${formatBytes(new Blob([jsonVal]).size)}`;
+        }
+
+        csvInput.addEventListener('input', updateStats);
+        jsonInput.addEventListener('input', updateStats);
+
+        // --- Features: Copy, Download, Clear ---
+        function copyToClipboard(id) {
+            const el = document.getElementById(id);
+            if (!el.value) return showToast('Nothing to copy', 'error');
+            el.select();
+            document.execCommand('copy');
+            window.getSelection().removeAllRanges();
+            showToast('Copied to clipboard', 'success');
+        }
+
+        function clearPanel(type) {
+            document.getElementById(type + 'Input').value = '';
+            updateStats();
+        }
+
+        function downloadFile(type) {
+            const val = document.getElementById(type + 'Input').value;
+            if (!val) return showToast('Buffer is empty', 'error');
+            
+            const blob = new Blob([val], { type: type === 'csv' ? 'text/csv' : 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `data.${type}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // --- Toast Notification System ---
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            const colors = {
+                success: 'bg-emerald-600',
+                error: 'bg-rose-600',
+                info: 'bg-zinc-700'
+            };
+            
+            toast.className = `${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 min-w-[250px] toast-enter border border-white/10 backdrop-blur-md`;
+            
+            let icon = '';
+            if (type === 'success') icon = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+            else if (type === 'error') icon = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
+            else icon = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+
+            toast.innerHTML = `${icon}<span class="text-sm font-medium">${message}</span>`;
+            
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+    </script>
+</body>
+</html>
