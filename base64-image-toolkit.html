@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Base64 Image Toolkit</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' }
+                    },
+                    fontFamily: { sans:['Inter', 'system-ui', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        /* Custom scrollbar */
+        textarea::-webkit-scrollbar { width: 8px; height: 8px; }
+        textarea::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        textarea::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        textarea::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+
+        .checkerboard {
+            background-color: #f8fafc;
+            background-image: linear-gradient(45deg, #e2e8f0 25%, transparent 25%), 
+                              linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), 
+                              linear-gradient(45deg, transparent 75%, #e2e8f0 75%), 
+                              linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+
+        /* Dropzone animation */
+        #dropzone { transition: all 0.2s ease-in-out; }
+        #dropzone.dragover {
+            background-color: #eff6ff;
+            border-color: #3b82f6;
+            transform: scale(1.02);
+        }
+
+        /* Toast animations */
+        @keyframes slideInUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        .toast-enter { animation: slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .toast-exit { animation: fadeOut 0.3s ease-out forwards; }
+
+        /* Tab Transitions */
+        .tab-content { display: none; opacity: 0; transition: opacity 0.3s ease; }
+        .tab-content.active { display: grid; opacity: 1; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col p-4 md:p-8 selection:bg-primary-500 selection:text-white">
+
+    <div class="max-w-6xl w-full mx-auto flex-grow flex flex-col gap-6">
+        
+        <!-- Header & Tab Navigation -->
+        <header class="text-center mb-2">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight mb-4">Base64 Image Toolkit</h1>
+            
+            <!-- Segmented Control / Tabs -->
+            <div class="inline-flex bg-slate-200 p-1 rounded-xl shadow-inner">
+                <button onclick="switchTab('encode')" id="btnTabEncode" class="px-6 py-2 rounded-lg text-sm font-semibold transition-all bg-white text-slate-800 shadow-sm">
+                    Image to Base64
+                </button>
+                <button onclick="switchTab('decode')" id="btnTabDecode" class="px-6 py-2 rounded-lg text-sm font-semibold transition-all text-slate-500 hover:text-slate-700">
+                    Base64 to Image
+                </button>
+            </div>
+        </header>
+
+        <!-- ========================================== -->
+        <!-- TAB 1: IMAGE TO BASE64                     -->
+        <!-- ========================================== -->
+        <div id="tabEncode" class="tab-content active grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- LEFT COLUMN: Input & Settings -->
+            <div class="lg:col-span-5 flex flex-col gap-6">
+                
+                <!-- Dropzone -->
+                <div id="dropzone" class="glass-panel border-2 border-dashed border-slate-300 rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer min-h-[300px] shadow-sm hover:border-primary-500 hover:bg-slate-50 relative overflow-hidden group">
+                    <input type="file" id="fileInput" class="hidden" accept="image/*" />
+                    
+                    <div class="bg-primary-50 text-primary-600 p-4 rounded-full mb-4 group-hover:scale-110 transition-transform">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-slate-700 mb-1">Drag & Drop an image here</h3>
+                    <p class="text-sm text-slate-500 mb-4">or click to browse from your device</p>
+                    <div class="inline-flex items-center gap-2 text-xs font-medium text-slate-400 bg-slate-100 px-3 py-1.5 rounded-full">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                        Supports pasting from clipboard (Ctrl+V)
+                    </div>
+                </div>
+
+                <!-- Advanced Settings -->
+                <div id="settingsPanel" class="glass-panel border border-slate-200 rounded-2xl p-6 shadow-sm hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-semibold text-slate-800 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                            Optimization Settings
+                        </h3>
+                        <span id="svgWarning" class="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded hidden">Disabled for SVG</span>
+                    </div>
+                    
+                    <div class="space-y-4" id="controlsGroup">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Scale / Resize</label>
+                            <div class="flex items-center gap-3">
+                                <input type="range" id="scaleSlider" min="10" max="100" value="100" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary-600">
+                                <span id="scaleValue" class="text-sm font-mono text-slate-500 w-12 text-right">100%</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Output Format</label>
+                            <select id="formatSelect" class="w-full bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block p-2.5 outline-none">
+                                <option value="original">Original (No Conversion)</option>
+                                <option value="image/jpeg">JPEG</option>
+                                <option value="image/webp">WEBP (Best compression)</option>
+                                <option value="image/png">PNG</option>
+                            </select>
+                        </div>
+
+                        <div id="qualityGroup" class="hidden">
+                            <label class="block text-sm font-medium text-slate-600 mb-1">Image Quality</label>
+                            <div class="flex items-center gap-3">
+                                <input type="range" id="qualitySlider" min="10" max="100" value="80" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary-600">
+                                <span id="qualityValue" class="text-sm font-mono text-slate-500 w-12 text-right">80%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button id="resetBtn" class="mt-5 w-full py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        Clear Image
+                    </button>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Output -->
+            <div class="lg:col-span-7 flex flex-col gap-6">
+                <div class="glass-panel border border-slate-200 rounded-2xl shadow-sm flex flex-col overflow-hidden h-full">
+                    
+                    <!-- Preview & Stats -->
+                    <div class="flex flex-col sm:flex-row border-b border-slate-200">
+                        <div class="w-full sm:w-1/3 p-4 border-b sm:border-b-0 sm:border-r border-slate-200 bg-slate-50 flex flex-col justify-center items-center checkerboard min-h-[160px]">
+                            <img id="previewImg" class="max-w-full max-h-32 object-contain hidden shadow-sm rounded border border-slate-200 bg-white" alt="Preview" />
+                            <div id="previewPlaceholder" class="text-slate-400 text-sm text-center">
+                                <svg class="w-10 h-10 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                No image loaded
+                            </div>
+                        </div>
+
+                        <div class="w-full sm:w-2/3 p-4 bg-white flex flex-col justify-center gap-3">
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-slate-500">Dimensions:</span>
+                                <span id="statDimensions" class="font-mono font-medium text-slate-800">0 × 0 px</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-slate-500">Original Size:</span>
+                                <span id="statOriginalSize" class="font-mono font-medium text-slate-800">0 B</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm pt-2 border-t border-slate-100">
+                                <span class="text-slate-500 font-medium">Base64 Size:</span>
+                                <span id="statBase64Size" class="font-mono font-bold text-primary-600">0 B</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Textarea -->
+                    <div class="p-4 flex-grow flex flex-col bg-white">
+                        <label class="block text-sm font-semibold text-slate-700 mb-2 flex justify-between">
+                            <span>Base64 String</span>
+                            <span id="charCount" class="text-xs text-slate-400 font-mono font-normal">0 chars</span>
+                        </label>
+                        <textarea id="base64Output" readonly placeholder="Base64 output will appear here..." class="w-full flex-grow min-h-[200px] p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none break-all"></textarea>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="p-4 bg-slate-50 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <button onclick="copyData('dataUrl')" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 py-2 px-3 rounded-lg text-sm font-medium transition-all shadow-sm flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            Data URL
+                        </button>
+                        <button onclick="copyData('raw')" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 py-2 px-3 rounded-lg text-sm font-medium transition-all shadow-sm flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                            Raw Base64
+                        </button>
+                        <button onclick="copyData('html')" class="bg-primary-50 border border-primary-200 hover:bg-primary-100 text-primary-700 py-2 px-3 rounded-lg text-sm font-medium transition-all shadow-sm flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                            Copy HTML
+                        </button>
+                        <button onclick="copyData('css')" class="bg-slate-800 hover:bg-slate-900 text-white py-2 px-3 rounded-lg text-sm font-medium transition-all shadow-sm flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path></svg>
+                            Copy CSS
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB 2: BASE64 TO IMAGE                     -->
+        <!-- ========================================== -->
+        <div id="tabDecode" class="tab-content grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- LEFT COLUMN: Input -->
+            <div class="lg:col-span-6 flex flex-col gap-6 h-full">
+                <div class="glass-panel border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col h-full min-h-[400px]">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-semibold text-slate-800 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                            Paste Base64 String
+                        </h3>
+                        <div class="flex gap-2">
+                            <button onclick="pasteFromClipboard()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-medium transition-colors">
+                                Paste
+                            </button>
+                            <button onclick="clearDecodeInput()" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-lg font-medium transition-colors">
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <textarea id="decodeInput" placeholder="Paste your Base64 string here...&#10;&#10;E.g: data:image/png;base64,iVBORw0KGgo...&#10;OR raw string: iVBORw0KGgo..." class="w-full flex-grow p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none break-all"></textarea>
+                    
+                    <p class="text-xs text-slate-400 mt-3 flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        We automatically detect formats (PNG, JPG, WEBP, SVG, GIF) if Data URI prefix is missing.
+                    </p>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Preview & Download -->
+            <div class="lg:col-span-6 flex flex-col gap-6 h-full">
+                <div class="glass-panel border border-slate-200 rounded-2xl shadow-sm flex flex-col overflow-hidden h-full">
+                    
+                    <!-- Decoding Result Viewer -->
+                    <div class="flex-grow flex flex-col">
+                        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-white">
+                            <h3 class="font-semibold text-slate-800">Decoded Image</h3>
+                            <span id="decodeStatus" class="text-xs px-2 py-1 rounded bg-slate-100 text-slate-500 font-medium">Waiting for input...</span>
+                        </div>
+                        
+                        <!-- Decoder Preview Box -->
+                        <div class="w-full flex-grow p-4 bg-slate-50 flex flex-col justify-center items-center checkerboard min-h-[300px] relative">
+                            <img id="decodePreview" class="max-w-full max-h-[300px] object-contain hidden shadow-md rounded border border-slate-200 bg-white" alt="Decoded Preview" />
+                            <div id="decodePlaceholder" class="text-slate-400 text-sm text-center">
+                                <svg class="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                Image will appear here
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Decode Stats & Action -->
+                    <div class="p-4 bg-white border-t border-slate-200">
+                        <div class="grid grid-cols-3 gap-4 mb-4 text-center">
+                            <div class="bg-slate-50 rounded-lg p-2 border border-slate-100">
+                                <span class="block text-xs text-slate-500 mb-1">Detected Format</span>
+                                <span id="decodeFormat" class="font-mono text-sm font-semibold text-slate-800">-</span>
+                            </div>
+                            <div class="bg-slate-50 rounded-lg p-2 border border-slate-100">
+                                <span class="block text-xs text-slate-500 mb-1">Dimensions</span>
+                                <span id="decodeDim" class="font-mono text-sm font-semibold text-slate-800">-</span>
+                            </div>
+                            <div class="bg-slate-50 rounded-lg p-2 border border-slate-100">
+                                <span class="block text-xs text-slate-500 mb-1">Estimated Size</span>
+                                <span id="decodeSize" class="font-mono text-sm font-semibold text-slate-800">-</span>
+                            </div>
+                        </div>
+
+                        <button id="btnDownload" onclick="downloadImage()" disabled class="w-full bg-primary-600 hover:bg-primary-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white py-3 px-4 rounded-xl text-sm font-semibold transition-all shadow-sm flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Download Image
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-6 right-6 flex flex-col gap-3 z-50 pointer-events-none"></div>
+
+    <script>
+        /* ==========================================
+           TAB MANAGEMENT
+           ========================================== */
+        function switchTab(tab) {
+            // Tab Buttons
+            const btnEncode = document.getElementById('btnTabEncode');
+            const btnDecode = document.getElementById('btnTabDecode');
+            // Tab Contents
+            const tabEncode = document.getElementById('tabEncode');
+            const tabDecode = document.getElementById('tabDecode');
+
+            if (tab === 'encode') {
+                btnEncode.className = "px-6 py-2 rounded-lg text-sm font-semibold transition-all bg-white text-slate-800 shadow-sm";
+                btnDecode.className = "px-6 py-2 rounded-lg text-sm font-semibold transition-all text-slate-500 hover:text-slate-700";
+                tabEncode.classList.add('active');
+                tabDecode.classList.remove('active');
+            } else {
+                btnDecode.className = "px-6 py-2 rounded-lg text-sm font-semibold transition-all bg-white text-slate-800 shadow-sm";
+                btnEncode.className = "px-6 py-2 rounded-lg text-sm font-semibold transition-all text-slate-500 hover:text-slate-700";
+                tabDecode.classList.add('active');
+                tabEncode.classList.remove('active');
+            }
+        }
+
+        /* ==========================================
+           UTILITIES
+           ========================================== */
+        function formatBytes(bytes, decimals = 2) {
+            if (!+bytes) return '0 B';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            const isSuccess = type === 'success';
+            const bgColor = isSuccess ? 'bg-slate-800' : 'bg-red-600';
+            const icon = isSuccess 
+                ? `<svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`
+                : `<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+
+            toast.className = `toast-enter flex items-center gap-3 ${bgColor} text-white px-4 py-3 rounded-xl shadow-lg font-medium text-sm pointer-events-auto`;
+            toast.innerHTML = `${icon} ${message}`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('toast-enter');
+                toast.classList.add('toast-exit');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        /* ==========================================
+           TAB 1: IMAGE TO BASE64 LOGIC
+           ========================================== */
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const previewImg = document.getElementById('previewImg');
+        const previewPlaceholder = document.getElementById('previewPlaceholder');
+        const base64Output = document.getElementById('base64Output');
+        
+        let currentFile = null;
+        let originalImageObj = null;
+        let isSvg = false;
+        let generatedDataUrl = '';
+
+        // Init Tab 1
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+        dropzone.addEventListener('drop', (e) => { e.preventDefault(); dropzone.classList.remove('dragover'); if (e.dataTransfer.files[0]) handleEncodeFile(e.dataTransfer.files[0]); });
+        dropzone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => handleEncodeFile(e.target.files[0]));
+        
+        window.addEventListener('paste', (e) => {
+            // Only handle paste as file if we are on the encode tab (or if it's strictly a file object)
+            if(document.getElementById('tabEncode').classList.contains('active')) {
+                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+                for (let index in items) {
+                    const item = items[index];
+                    if (item.kind === 'file' && item.type.startsWith('image/')) {
+                        handleEncodeFile(item.getAsFile());
+                        break;
+                    }
+                }
+            }
+        });
+
+        document.getElementById('scaleSlider').addEventListener('input', (e) => { document.getElementById('scaleValue').textContent = `${e.target.value}%`; debounceProcess(); });
+        document.getElementById('qualitySlider').addEventListener('input', (e) => { document.getElementById('qualityValue').textContent = `${e.target.value}%`; debounceProcess(); });
+        document.getElementById('formatSelect').addEventListener('change', (e) => {
+            document.getElementById('qualityGroup').classList.toggle('hidden', e.target.value === 'original' || e.target.value === 'image/png');
+            processImage();
+        });
+        document.getElementById('resetBtn').addEventListener('click', resetEncodeApp);
+
+        function handleEncodeFile(file) {
+            if (!file || !file.type.startsWith('image/')) { showToast('Please upload a valid image file.', 'error'); return; }
+            currentFile = file;
+            isSvg = file.type === 'image/svg+xml';
+            document.getElementById('statOriginalSize').textContent = formatBytes(file.size);
+            
+            document.getElementById('settingsPanel').classList.remove('hidden');
+            if (isSvg) {
+                document.getElementById('svgWarning').classList.remove('hidden');
+                document.getElementById('controlsGroup').classList.add('opacity-50', 'pointer-events-none');
+            } else {
+                document.getElementById('svgWarning').classList.add('hidden');
+                document.getElementById('controlsGroup').classList.remove('opacity-50', 'pointer-events-none');
+                document.getElementById('formatSelect').value = 'original';
+                document.getElementById('qualityGroup').classList.add('hidden');
+                document.getElementById('scaleSlider').value = 100;
+                document.getElementById('scaleValue').textContent = '100%';
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    originalImageObj = img;
+                    document.getElementById('statDimensions').textContent = `${img.width} × ${img.height} px`;
+                    if (isSvg) updateEncodeUI(e.target.result); else processImage();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        let debounceTimer;
+        function debounceProcess() { clearTimeout(debounceTimer); debounceTimer = setTimeout(processImage, 150); }
+
+        function processImage() {
+            if (!originalImageObj || isSvg) return;
+            const scale = parseInt(document.getElementById('scaleSlider').value) / 100;
+            const formatSelect = document.getElementById('formatSelect').value;
+            const format = formatSelect === 'original' ? currentFile.type : formatSelect;
+            const quality = parseInt(document.getElementById('qualitySlider').value) / 100;
+
+            if (scale === 1 && formatSelect === 'original') {
+                const reader = new FileReader();
+                reader.onload = (e) => updateEncodeUI(e.target.result);
+                reader.readAsDataURL(currentFile);
+                return;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(originalImageObj.width * scale));
+            canvas.height = Math.max(1, Math.round(originalImageObj.height * scale));
+            
+            const ctx = canvas.getContext('2d');
+            if (format === 'image/jpeg') { ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+            ctx.drawImage(originalImageObj, 0, 0, canvas.width, canvas.height);
+            updateEncodeUI(canvas.toDataURL(format, quality), canvas.width, canvas.height);
+        }
+
+        function updateEncodeUI(dataUrl, width = null, height = null) {
+            generatedDataUrl = dataUrl;
+            previewImg.src = dataUrl;
+            previewImg.classList.remove('hidden');
+            previewPlaceholder.classList.add('hidden');
+            base64Output.value = dataUrl;
+            document.getElementById('charCount').textContent = `${dataUrl.length.toLocaleString()} chars`;
+            
+            const base64Bytes = Math.round((dataUrl.length * 3) / 4) - (dataUrl.indexOf('=') > 0 ? (dataUrl.length - dataUrl.indexOf('=')) : 0);
+            document.getElementById('statBase64Size').textContent = formatBytes(base64Bytes);
+            if (width && height) document.getElementById('statDimensions').textContent = `${width} × ${height} px`;
+        }
+
+        function copyData(type) {
+            if (!generatedDataUrl) { showToast('No image data to copy!', 'error'); return; }
+            let textToCopy = '';
+            switch(type) {
+                case 'dataUrl': textToCopy = generatedDataUrl; break;
+                case 'raw': textToCopy = generatedDataUrl.split(',')[1] || ''; break;
+                case 'html': textToCopy = `<img src="${generatedDataUrl}" alt="Base64 Image" />`; break;
+                case 'css': textToCopy = `background-image: url("${generatedDataUrl}");`; break;
+            }
+            navigator.clipboard.writeText(textToCopy).then(() => showToast(`Copied ${type.toUpperCase()}!`, 'success'))
+                .catch(() => showToast('Failed to copy text', 'error'));
+        }
+
+        function resetEncodeApp() {
+            currentFile = null; originalImageObj = null; generatedDataUrl = ''; isSvg = false;
+            fileInput.value = ''; base64Output.value = ''; previewImg.src = '';
+            previewImg.classList.add('hidden'); previewPlaceholder.classList.remove('hidden');
+            document.getElementById('settingsPanel').classList.add('hidden');
+            document.getElementById('statDimensions').textContent = '0 × 0 px';
+            document.getElementById('statOriginalSize').textContent = '0 B';
+            document.getElementById('statBase64Size').textContent = '0 B';
+            document.getElementById('charCount').textContent = '0 chars';
+            showToast('Image cleared');
+        }
+
+        /* ==========================================
+           TAB 2: BASE64 TO IMAGE LOGIC
+           ========================================== */
+        const decodeInput = document.getElementById('decodeInput');
+        const decodePreview = document.getElementById('decodePreview');
+        const decodePlaceholder = document.getElementById('decodePlaceholder');
+        const btnDownload = document.getElementById('btnDownload');
+        let currentDecodedUrl = '';
+        let currentDecodedExt = 'png';
+
+        let decodeTimer;
+        decodeInput.addEventListener('input', () => {
+            clearTimeout(decodeTimer);
+            decodeTimer = setTimeout(processDecodeInput, 300); // 300ms debounce
+        });
+
+        async function pasteFromClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if(text) {
+                    decodeInput.value = text;
+                    processDecodeInput();
+                    showToast('Pasted from clipboard');
+                }
+            } catch (err) {
+                showToast('Clipboard access denied', 'error');
+            }
+        }
+
+        function clearDecodeInput() {
+            decodeInput.value = '';
+            resetDecodeUI();
+        }
+
+        function resetDecodeUI() {
+            currentDecodedUrl = '';
+            decodePreview.src = '';
+            decodePreview.classList.add('hidden');
+            decodePlaceholder.classList.remove('hidden');
+            
+            document.getElementById('decodeStatus').textContent = 'Waiting for input...';
+            document.getElementById('decodeStatus').className = 'text-xs px-2 py-1 rounded bg-slate-100 text-slate-500 font-medium';
+            document.getElementById('decodeFormat').textContent = '-';
+            document.getElementById('decodeDim').textContent = '-';
+            document.getElementById('decodeSize').textContent = '-';
+            btnDownload.disabled = true;
+        }
+
+        function getMimeTypeFromBase64Header(b64Data) {
+            // Magic number signatures for common image types
+            const signatures = {
+                '/9j/': 'image/jpeg',
+                'iVBORw0KGgo': 'image/png',
+                'R0lGODdh': 'image/gif',
+                'R0lGODlh': 'image/gif',
+                'UklGR': 'image/webp',
+                'PHN2Zy': 'image/svg+xml' // <svg
+            };
+            
+            for (const[sig, mime] of Object.entries(signatures)) {
+                if (b64Data.startsWith(sig)) return mime;
+            }
+            return 'image/png'; // Safe fallback
+        }
+
+        function processDecodeInput() {
+            let val = decodeInput.value.trim();
+            if(!val) {
+                resetDecodeUI();
+                return;
+            }
+
+            document.getElementById('decodeStatus').textContent = 'Processing...';
+
+            // Clean up string (remove quotes, whitespace, html tags if accidentially copied)
+            val = val.replace(/['"]+/g, '').replace(/\s/g, '');
+            if(val.startsWith('<imgsrc=')) {
+                const match = val.match(/src=([^>]+)/);
+                if(match) val = match[1];
+            }
+
+            let finalDataUrl = val;
+            let mimeType = '';
+
+            // Check if missing "data:image..." prefix
+            if(!val.startsWith('data:')) {
+                mimeType = getMimeTypeFromBase64Header(val);
+                finalDataUrl = `data:${mimeType};base64,${val}`;
+            } else {
+                // Extract mime type from string
+                const mimeMatch = val.match(/^data:(image\/[a-zA-Z+]+);base64,/);
+                mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+            }
+
+            // Determine extension for download
+            currentDecodedExt = mimeType.split('/')[1] || 'png';
+            if(currentDecodedExt.includes('+')) currentDecodedExt = currentDecodedExt.split('+')[0];
+
+            // Render Image
+            const img = new Image();
+            img.onload = () => {
+                currentDecodedUrl = finalDataUrl;
+                decodePreview.src = finalDataUrl;
+                decodePreview.classList.remove('hidden');
+                decodePlaceholder.classList.add('hidden');
+
+                // Update Stats UI
+                document.getElementById('decodeStatus').textContent = 'Success';
+                document.getElementById('decodeStatus').className = 'text-xs px-2 py-1 rounded bg-green-100 text-green-700 font-medium';
+                
+                document.getElementById('decodeFormat').textContent = currentDecodedExt.toUpperCase();
+                document.getElementById('decodeDim').textContent = `${img.width}×${img.height}`;
+                
+                // Calc base64 size back to bytes
+                const base64Str = finalDataUrl.split(',')[1] || finalDataUrl;
+                const sizeInBytes = Math.round((base64Str.length * 3) / 4) - (base64Str.indexOf('=') > 0 ? (base64Str.length - base64Str.indexOf('=')) : 0);
+                document.getElementById('decodeSize').textContent = formatBytes(sizeInBytes);
+
+                btnDownload.disabled = false;
+            };
+
+            img.onerror = () => {
+                resetDecodeUI();
+                document.getElementById('decodeStatus').textContent = 'Invalid Image Data';
+                document.getElementById('decodeStatus').className = 'text-xs px-2 py-1 rounded bg-red-100 text-red-700 font-medium';
+            };
+
+            img.src = finalDataUrl;
+        }
+
+        function downloadImage() {
+            if(!currentDecodedUrl) return;
+            const a = document.createElement('a');
+            a.href = currentDecodedUrl;
+            a.download = `decoded_image_${new Date().getTime()}.${currentDecodedExt}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast(`Image downloaded (${currentDecodedExt.toUpperCase()})`);
+        }
+
+    </script>
+</body>
+</html>
