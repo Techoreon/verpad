@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visual Markdown Table Generator</title>
+    <title>Advanced Markdown Table Studio</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -11,23 +11,12 @@
             theme: {
                 extend: {
                     colors: {
-                        slate: {
-                            850: '#151e2e',
-                            900: '#0f172a',
-                            950: '#020617',
-                        },
-                        primary: {
-                            400: '#60a5fa',
-                            500: '#3b82f6',
-                            600: '#2563eb',
-                        }
+                        slate: { 850: '#151e2e', 900: '#0f172a', 950: '#020617' },
+                        brand: { 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5' }
                     },
                     fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                        mono: ['Fira Code', 'ui-monospace', 'SFMono-Regular', 'monospace'],
-                    },
-                    transitionProperty: {
-                        'colors-shadow': 'background-color, border-color, color, fill, stroke, box-shadow',
+                        sans:['Inter', 'system-ui', 'sans-serif'],
+                        mono:['Fira Code', 'ui-monospace', 'SFMono-Regular', 'monospace'],
                     }
                 }
             }
@@ -36,315 +25,634 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600;700&display=swap');
 
-        body {
-            background-color: #020617; /* slate-950 */
-            color: #cbd5e1; /* slate-300 */
-        }
+        body { background-color: #020617; color: #cbd5e1; }
 
-        /* Custom Scrollbar for a premium feel */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0f172a; 
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #334155; 
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #475569; 
-        }
+        /* Premium Custom Scrollbars */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
-        /* Table Input Transitions */
-        table input {
-            transition: background-color 0.2s ease, color 0.2s ease;
-        }
+        /* Table & Input Styling */
+        table { border-collapse: separate; border-spacing: 0; }
+        th, td { border: 1px solid #1e293b; transition: all 0.2s ease; position: relative; }
         
-        /* Cell Focus Rings */
-        td:focus-within, th:focus-within {
-            position: relative;
-            z-index: 10;
+        .cell-input {
+            width: 100%; height: 100%; min-width: 160px;
+            background: transparent; outline: none;
+            padding: 0.75rem 1rem; color: #e2e8f0; transition: all 0.2s;
         }
+        .cell-input:focus { background: rgba(99, 102, 241, 0.05); }
+        
+        /* Crosshair Highlighting */
+        .highlight-row { background-color: rgba(30, 41, 59, 0.4) !important; }
+        .highlight-col { background-color: rgba(30, 41, 59, 0.4) !important; }
+        td:focus-within, th:focus-within { background-color: rgba(30, 41, 59, 0.8) !important; z-index: 10; }
         td:focus-within::after, th:focus-within::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border: 2px solid #3b82f6; /* primary-500 */
-            pointer-events: none;
-            border-radius: 2px;
+            content: ''; position: absolute; inset: -1px; border: 2px solid #6366f1; pointer-events: none; border-radius: 2px; z-index: 20;
         }
+
+        /* HTML Preview Table Styling */
+        .preview-table { width: 100%; border-collapse: collapse; color: #cbd5e1; font-size: 0.875rem; }
+        .preview-table th { background-color: #1e293b; font-weight: 600; text-align: left; padding: 0.75rem; border: 1px solid #334155; }
+        .preview-table td { padding: 0.75rem; border: 1px solid #334155; background-color: #0f172a; }
+        .preview-table tr:nth-child(even) td { background-color: #151e2e; }
 
         /* Toast Animation */
         @keyframes slideUpFade {
-            from { opacity: 0; transform: translateY(10px) translateX(-50%); }
+            from { opacity: 0; transform: translateY(20px) translateX(-50%); }
             to { opacity: 1; transform: translateY(0) translateX(-50%); }
         }
-        .toast-show {
-            animation: slideUpFade 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
+        .toast-show { animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
+        /* Tooltip */
+        .group:hover .tooltip { opacity: 1; transform: translateY(0); pointer-events: auto; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col p-4 md:p-8 font-sans antialiased selection:bg-primary-500 selection:text-white">
+<body class="min-h-screen flex flex-col font-sans antialiased selection:bg-brand-500 selection:text-white pb-10">
 
-    <div class="max-w-6xl w-full mx-auto flex flex-col gap-6 flex-grow">
-        
-        <!-- Header -->
-        <header class="text-center mb-2">
-            <h1 class="text-3xl md:text-4xl font-bold text-white tracking-tight mb-3">Markdown Table Generator</h1>
-            <p class="text-slate-400">Edit the visual table below. Perfectly padded Markdown is generated in real-time.</p>
-        </header>
-
-        <!-- Main Workspace -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-            
-            <!-- Toolbar -->
-            <div class="bg-slate-850 border-b border-slate-800 p-4 flex flex-wrap items-center justify-between gap-4">
-                <div class="flex items-center gap-2">
-                    <button onclick="addRow()" class="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                        <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                        Add Row
-                    </button>
-                    <button onclick="addColumn()" class="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                        <svg class="w-4 h-4 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                        Add Column
-                    </button>
+    <!-- Top Navbar -->
+    <nav class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-[1400px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-brand-500/10 p-2 rounded-lg text-brand-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
                 </div>
+                <h1 class="text-xl font-bold text-white tracking-tight">MD Table Studio</h1>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="document.getElementById('fileUpload').click()" class="text-sm font-medium text-slate-300 hover:text-white px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    Import CSV
+                </button>
+                <input type="file" id="fileUpload" accept=".csv" class="hidden" onchange="importCSV(event)">
                 
-                <div class="flex items-center gap-2">
-                    <button onclick="removeRow()" class="inline-flex items-center gap-2 bg-slate-900 hover:bg-red-900/30 text-slate-400 hover:text-red-400 border border-slate-800 hover:border-red-900/50 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
-                        Remove Row
-                    </button>
-                    <button onclick="removeColumn()" class="inline-flex items-center gap-2 bg-slate-900 hover:bg-red-900/30 text-slate-400 hover:text-red-400 border border-slate-800 hover:border-red-900/50 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
-                        Remove Column
-                    </button>
+                <button onclick="openImportModal()" class="text-sm font-medium text-slate-300 hover:text-white px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                    Import Markdown
+                </button>
+                
+                <div class="w-px h-6 bg-slate-700 mx-1"></div>
+                
+                <button onclick="exportCSV()" class="text-sm font-medium text-slate-300 hover:text-white px-3 py-2 rounded-lg hover:bg-slate-800 transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Export CSV
+                </button>
+                <button onclick="clearTable()" class="text-sm font-medium text-red-400 hover:text-red-300 px-3 py-2 rounded-lg hover:bg-red-900/20 transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    Clear
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-[1400px] w-full mx-auto p-4 md:p-6 flex flex-col gap-6 flex-grow">
+        
+        <!-- VISUAL EDITOR -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-2 text-white font-semibold">
+                    <svg class="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    Visual Editor
+                </div>
+                <div class="text-xs text-slate-500 flex items-center gap-4">
+                    <span class="flex items-center gap-1"><kbd class="bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">↑↓←→</kbd> to navigate</span>
                 </div>
             </div>
 
-            <!-- Visual Table Editor -->
-            <div class="overflow-x-auto p-6 bg-[#0B1120]">
-                <table id="mdTable" class="w-full border-collapse min-w-max">
-                    <thead id="tableHead">
-                        <!-- Header injected via JS -->
-                    </thead>
-                    <tbody id="tableBody">
-                        <!-- Body injected via JS -->
-                    </tbody>
+            <div class="overflow-x-auto p-6 bg-[#0B1120] rounded-b-2xl relative min-h-[300px]" id="tableContainer">
+                <table id="mdTable" class="w-max min-w-full">
+                    <thead id="tHead"></thead>
+                    <tbody id="tBody"></tbody>
                 </table>
+                
+                <!-- Add Global Row/Col Buttons -->
+                <button onclick="addColumn(-1)" class="absolute right-0 top-6 bottom-6 w-8 bg-slate-800/50 hover:bg-brand-500/20 text-slate-400 hover:text-brand-400 border-l border-slate-700 flex flex-col items-center justify-center transition-colors group z-0">
+                    <svg class="w-5 h-5 group-hover:scale-125 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                </button>
+                <button onclick="addRow(-1)" class="absolute bottom-0 left-6 right-8 h-8 bg-slate-800/50 hover:bg-brand-500/20 text-slate-400 hover:text-brand-400 border-t border-slate-700 flex items-center justify-center transition-colors group z-0">
+                    <svg class="w-5 h-5 group-hover:scale-125 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                </button>
             </div>
+        </div>
 
-            <!-- Output Area -->
-            <div class="border-t border-slate-800 bg-slate-900 flex flex-col">
-                <div class="flex items-center justify-between px-6 py-3 border-b border-slate-800 bg-slate-850">
-                    <div class="flex items-center gap-2 text-slate-300 font-semibold">
-                        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+        <!-- OUTPUT SECTIONS (Grid) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- Raw Markdown Area -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl flex flex-col h-[400px]">
+                <div class="px-5 py-3 border-b border-slate-800 flex items-center justify-between bg-slate-850 rounded-t-2xl">
+                    <div class="flex items-center gap-2 text-slate-200 font-semibold text-sm">
+                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
                         Generated Markdown
                     </div>
-                    <button onclick="copyToClipboard()" class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-primary-500/20">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                        Copy to Clipboard
+                    <button onclick="copyToClipboard('mdOutput')" class="text-xs font-medium bg-brand-600 hover:bg-brand-500 text-white px-3 py-1.5 rounded-md transition-colors shadow-lg flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        Copy
                     </button>
                 </div>
-                <textarea id="mdOutput" readonly class="w-full h-64 p-6 bg-slate-900 text-slate-300 font-mono text-sm resize-y focus:outline-none whitespace-pre overflow-auto" placeholder="Markdown will appear here..."></textarea>
+                <textarea id="mdOutput" readonly class="w-full flex-grow p-5 bg-transparent text-brand-100 font-mono text-sm resize-none focus:outline-none whitespace-pre overflow-auto leading-relaxed"></textarea>
+            </div>
+
+            <!-- HTML Preview Area -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl flex flex-col h-[400px]">
+                <div class="px-5 py-3 border-b border-slate-800 flex items-center justify-between bg-slate-850 rounded-t-2xl">
+                    <div class="flex items-center gap-2 text-slate-200 font-semibold text-sm">
+                        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                        Live Preview
+                    </div>
+                    <button onclick="copyHTML()" class="text-xs font-medium bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-md transition-colors shadow-lg flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        Copy HTML
+                    </button>
+                </div>
+                <div id="htmlPreview" class="w-full flex-grow p-5 overflow-auto bg-[#0B1120] rounded-b-2xl">
+                    <!-- Injected HTML Preview -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="importModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100] hidden items-center justify-center p-4 opacity-0 transition-opacity">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden transform scale-95 transition-transform" id="importModalContent">
+            <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
+                <h3 class="text-lg font-semibold text-white">Import Markdown Table</h3>
+                <button onclick="closeImportModal()" class="text-slate-400 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-6">
+                <p class="text-sm text-slate-400 mb-3">Paste your existing markdown table code below. We will parse it and load it into the visual editor.</p>
+                <textarea id="importTextarea" class="w-full h-48 bg-slate-950 border border-slate-700 rounded-lg p-4 text-slate-300 font-mono text-sm focus:outline-none focus:border-brand-500 transition-colors resize-none" placeholder="| Header 1 | Header 2 |&#10;| -------- | -------- |&#10;| Data 1   | Data 2   |"></textarea>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-800 bg-slate-850 flex justify-end gap-3">
+                <button onclick="closeImportModal()" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700 transition-colors">Cancel</button>
+                <button onclick="executeImport()" class="px-4 py-2 rounded-lg text-sm font-medium bg-brand-600 hover:bg-brand-500 text-white transition-colors shadow-lg">Import Table</button>
             </div>
         </div>
     </div>
 
     <!-- Toast Notification -->
-    <div id="toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-slate-800 border border-slate-700 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 opacity-0 pointer-events-none transition-opacity duration-300 z-50">
-        <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-        <span class="font-medium">Copied to clipboard!</span>
+    <div id="toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-slate-800 border border-slate-700 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 opacity-0 pointer-events-none transition-opacity duration-300 z-[200]">
+        <svg id="toastIcon" class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+        <span id="toastMsg" class="font-medium text-sm">Action successful!</span>
     </div>
 
     <script>
-        // DOM Elements
-        const tableHead = document.getElementById('tableHead');
-        const tableBody = document.getElementById('tableBody');
+        /* =========================================================
+           STATE MANAGEMENT
+           ========================================================= */
+        let state = {
+            headers: ['Column 1', 'Column 2', 'Column 3'],
+            align:['none', 'none', 'none'], // 'none', 'left', 'center', 'right'
+            rows: [['Value A1', 'Value B1', 'Value C1'],['Value A2', 'Value B2', 'Value C2'],
+                ['Value A3', 'Value B3', 'Value C3']
+            ]
+        };
+
+        const tHead = document.getElementById('tHead');
+        const tBody = document.getElementById('tBody');
         const mdOutput = document.getElementById('mdOutput');
-        const mdTable = document.getElementById('mdTable');
+        const htmlPreview = document.getElementById('htmlPreview');
+        const tableContainer = document.getElementById('tableContainer');
 
-        // State
-        let rowCount = 3;
-        let colCount = 3;
+        /* =========================================================
+           CORE RENDERING (State -> DOM)
+           ========================================================= */
+        function renderTable() {
+            tHead.innerHTML = '';
+            tBody.innerHTML = '';
 
-        // Initialize Application
-        function init() {
-            buildTable();
-            // Event delegation for input events to trigger real-time updates
-            mdTable.addEventListener('input', updateMarkdown);
-        }
-
-        // Build the initial HTML Table
-        function buildTable() {
-            tableHead.innerHTML = '';
-            tableBody.innerHTML = '';
-
-            // Header Row
+            // Render Header
             const trHead = document.createElement('tr');
-            for (let c = 0; c < colCount; c++) {
-                trHead.appendChild(createCell('th', c + 1));
-            }
-            tableHead.appendChild(trHead);
-
-            // Data Rows
-            for (let r = 0; r < rowCount; r++) {
-                const tr = document.createElement('tr');
-                for (let c = 0; c < colCount; c++) {
-                    tr.appendChild(createCell('td'));
-                }
-                tableBody.appendChild(tr);
-            }
-
-            updateMarkdown();
-        }
-
-        // Helper to create a table cell containing an input
-        function createCell(type, headerIndex = null) {
-            const cell = document.createElement(type);
-            const isHeader = type === 'th';
-            
-            // Apply sleek dark mode borders and backgrounds
-            cell.className = `border border-slate-700 bg-slate-800/50 hover:bg-slate-800 transition-colors relative`;
-            
-            const input = document.createElement('input');
-            input.type = 'text';
-            // Inputs are transparent and fill the whole cell space
-            input.className = `w-full h-full min-w-[120px] bg-transparent outline-none py-3 px-4 text-sm ${isHeader ? 'text-white font-semibold placeholder-slate-500' : 'text-slate-300 placeholder-slate-600'}`;
-            
-            if (isHeader) {
-                input.value = `Header ${headerIndex}`;
-            } else {
-                input.placeholder = '...';
-            }
-
-            cell.appendChild(input);
-            return cell;
-        }
-
-        // Add a new row to the body
-        function addRow() {
-            const tr = document.createElement('tr');
-            for (let c = 0; c < colCount; c++) {
-                tr.appendChild(createCell('td'));
-            }
-            tableBody.appendChild(tr);
-            rowCount++;
-            updateMarkdown();
-        }
-
-        // Remove the last row from the body
-        function removeRow() {
-            if (rowCount > 0) {
-                tableBody.removeChild(tableBody.lastElementChild);
-                rowCount--;
-                updateMarkdown();
-            }
-        }
-
-        // Add a new column to head and body
-        function addColumn() {
-            colCount++;
-            
-            // Add to Header
-            const trHead = tableHead.querySelector('tr');
-            trHead.appendChild(createCell('th', colCount));
-
-            // Add to Body
-            const rows = tableBody.querySelectorAll('tr');
-            rows.forEach(tr => {
-                tr.appendChild(createCell('td'));
-            });
-
-            updateMarkdown();
-        }
-
-        // Remove the last column from head and body
-        function removeColumn() {
-            if (colCount > 1) { // Keep at least 1 column
-                colCount--;
+            state.headers.forEach((h, colIndex) => {
+                const th = document.createElement('th');
+                th.className = 'bg-slate-850';
                 
-                // Remove from Header
-                const trHead = tableHead.querySelector('tr');
-                trHead.removeChild(trHead.lastElementChild);
+                // Header Input
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'cell-input font-semibold text-white';
+                input.value = h;
+                input.dataset.type = 'header';
+                input.dataset.col = colIndex;
+                input.addEventListener('input', handleInput);
+                input.addEventListener('focus', () => highlightCrosshair(null, colIndex));
+                input.addEventListener('blur', clearCrosshair);
 
-                // Remove from Body
-                const rows = tableBody.querySelectorAll('tr');
-                rows.forEach(tr => {
-                    tr.removeChild(tr.lastElementChild);
+                // Top Actions (Add Col Left/Right, Delete)
+                const actionTop = document.createElement('div');
+                actionTop.className = 'absolute -top-7 left-0 right-0 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20';
+                actionTop.innerHTML = `
+                    <button onclick="addColumn(${colIndex})" class="w-6 h-6 bg-slate-700 hover:bg-brand-500 text-white rounded text-xs flex items-center justify-center" title="Add Column Left"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg></button>
+                    <button onclick="deleteColumn(${colIndex})" class="w-6 h-6 bg-slate-700 hover:bg-red-500 text-white rounded text-xs flex items-center justify-center" title="Delete Column"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                    <button onclick="addColumn(${colIndex + 1})" class="w-6 h-6 bg-slate-700 hover:bg-brand-500 text-white rounded text-xs flex items-center justify-center" title="Add Column Right"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg></button>
+                `;
+
+                // Alignment Toolbar
+                const alignBar = document.createElement('div');
+                alignBar.className = 'flex items-center justify-center gap-1 border-t border-slate-700/50 bg-slate-900/50 p-1';
+                
+                const alignments = ['left', 'center', 'right'];
+                const icons =[
+                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h16"></path>',
+                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M7 12h10M4 18h16"></path>',
+                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M10 12h10M4 18h16"></path>'
+                ];
+
+                alignments.forEach((aln, i) => {
+                    const btn = document.createElement('button');
+                    const isActive = state.align[colIndex] === aln;
+                    btn.className = `p-1 rounded ${isActive ? 'bg-brand-500/20 text-brand-400' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-700'}`;
+                    btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">${icons[i]}</svg>`;
+                    btn.onclick = () => setAlignment(colIndex, isActive ? 'none' : aln);
+                    btn.title = `Align ${aln}`;
+                    alignBar.appendChild(btn);
                 });
 
-                updateMarkdown();
+                th.className += " group"; // For hover actions
+                th.appendChild(actionTop);
+                th.appendChild(input);
+                th.appendChild(alignBar);
+                trHead.appendChild(th);
+            });
+            tHead.appendChild(trHead);
+
+            // Render Body Rows
+            state.rows.forEach((rowData, rowIndex) => {
+                const tr = document.createElement('tr');
+                
+                rowData.forEach((cellData, colIndex) => {
+                    const td = document.createElement('td');
+                    td.className = 'bg-[#0f172a]/50 group/cell';
+                    
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'cell-input text-slate-300';
+                    input.value = cellData;
+                    input.dataset.type = 'cell';
+                    input.dataset.row = rowIndex;
+                    input.dataset.col = colIndex;
+                    
+                    input.addEventListener('input', handleInput);
+                    input.addEventListener('focus', () => highlightCrosshair(rowIndex, colIndex));
+                    input.addEventListener('blur', clearCrosshair);
+
+                    // Row actions on the very first cell of each row
+                    if(colIndex === 0) {
+                        const actionLeft = document.createElement('div');
+                        actionLeft.className = 'absolute -left-9 top-1/2 transform -translate-y-1/2 flex flex-col gap-1 opacity-0 group-hover/cell:opacity-100 transition-opacity z-20';
+                        actionLeft.innerHTML = `
+                            <button onclick="addRow(${rowIndex})" class="w-6 h-6 bg-slate-700 hover:bg-brand-500 text-white rounded text-xs flex items-center justify-center" title="Insert Row Above"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg></button>
+                            <button onclick="deleteRow(${rowIndex})" class="w-6 h-6 bg-slate-700 hover:bg-red-500 text-white rounded text-xs flex items-center justify-center" title="Delete Row"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                            <button onclick="addRow(${rowIndex + 1})" class="w-6 h-6 bg-slate-700 hover:bg-brand-500 text-white rounded text-xs flex items-center justify-center" title="Insert Row Below"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg></button>
+                        `;
+                        td.appendChild(actionLeft);
+                    }
+
+                    // Apply text alignment visually
+                    if(state.align[colIndex] === 'center') input.style.textAlign = 'center';
+                    else if(state.align[colIndex] === 'right') input.style.textAlign = 'right';
+
+                    td.appendChild(input);
+                    tr.appendChild(td);
+                });
+                tBody.appendChild(tr);
+            });
+
+            generateOutput();
+        }
+
+        /* =========================================================
+           STATE MUTATIONS
+           ========================================================= */
+        function handleInput(e) {
+            const el = e.target;
+            const val = el.value.replace(/\|/g, '\\|'); // Auto-escape pipes
+            const c = parseInt(el.dataset.col);
+            if (el.dataset.type === 'header') {
+                state.headers[c] = val;
+            } else {
+                const r = parseInt(el.dataset.row);
+                state.rows[r][c] = val;
+            }
+            generateOutput(); // Real-time update
+        }
+
+        function setAlignment(colIndex, type) {
+            state.align[colIndex] = type;
+            renderTable();
+        }
+
+        function addColumn(index) {
+            const insertAt = index === -1 ? state.headers.length : index;
+            state.headers.splice(insertAt, 0, `New Col`);
+            state.align.splice(insertAt, 0, 'none');
+            state.rows.forEach(r => r.splice(insertAt, 0, ''));
+            renderTable();
+        }
+
+        function deleteColumn(index) {
+            if (state.headers.length <= 1) return showToast('Cannot delete last column', 'error');
+            state.headers.splice(index, 1);
+            state.align.splice(index, 1);
+            state.rows.forEach(r => r.splice(index, 1));
+            renderTable();
+        }
+
+        function addRow(index) {
+            const newRow = new Array(state.headers.length).fill('');
+            const insertAt = index === -1 ? state.rows.length : index;
+            state.rows.splice(insertAt, 0, newRow);
+            renderTable();
+        }
+
+        function deleteRow(index) {
+            if (state.rows.length <= 1) return showToast('Cannot delete last row', 'error');
+            state.rows.splice(index, 1);
+            renderTable();
+        }
+
+        function clearTable() {
+            if(confirm('Are you sure you want to clear all data?')) {
+                state = {
+                    headers: ['Col 1', 'Col 2', 'Col 3'],
+                    align: ['none', 'none', 'none'],
+                    rows: [['', '', ''], ['', '', '']]
+                };
+                renderTable();
+                showToast('Table cleared');
             }
         }
 
-        // Core logic: Parse DOM table and generate perfectly aligned Markdown
-        function updateMarkdown() {
-            // 1. Extract raw data from the DOM
-            const rows = Array.from(mdTable.querySelectorAll('tr'));
-            const data = rows.map(row => {
-                const inputs = Array.from(row.querySelectorAll('input'));
-                // Markdown uses | for columns, so we must escape user-typed pipes
-                return inputs.map(input => input.value.trim().replace(/\|/g, '\\|'));
+        /* =========================================================
+           OUTPUT GENERATION (Markdown & HTML)
+           ========================================================= */
+        function generateOutput() {
+            if (!state.headers.length) return;
+
+            // 1. Calculate max widths for perfect padding
+            const widths = state.headers.map((h, i) => {
+                let max = Math.max(3, h.length); // min 3 chars for dashes
+                state.rows.forEach(r => {
+                    if (r[i] && r[i].length > max) max = r[i].length;
+                });
+                return max;
             });
 
-            if (data.length === 0 || data[0].length === 0) {
-                mdOutput.value = '';
+            let md = '';
+            let html = '<table class="preview-table">\n  <thead>\n    <tr>\n';
+
+            // Function to align text string padding
+            const pad = (str, width, align) => {
+                str = str || '';
+                if(align === 'center') {
+                    const diff = width - str.length;
+                    const left = Math.floor(diff / 2);
+                    const right = diff - left;
+                    return ' '.repeat(left) + str + ' '.repeat(right);
+                }
+                if(align === 'right') return str.padStart(width, ' ');
+                return str.padEnd(width, ' ');
+            };
+
+            // Header Row
+            md += '| ' + state.headers.map((h, i) => pad(h, widths[i], state.align[i])).join(' | ') + ' |\n';
+            state.headers.forEach((h, i) => {
+                const alignCSS = state.align[i] !== 'none' ? ` style="text-align: ${state.align[i]}"` : '';
+                html += `      <th${alignCSS}>${h || '&nbsp;'}</th>\n`;
+            });
+            html += '    </tr>\n  </thead>\n  <tbody>\n';
+
+            // Separator Row
+            md += '| ' + widths.map((w, i) => {
+                const aln = state.align[i];
+                if (aln === 'left') return ':' + '-'.repeat(w - 1);
+                if (aln === 'right') return '-'.repeat(w - 1) + ':';
+                if (aln === 'center') return ':' + '-'.repeat(w - 2) + ':';
+                return '-'.repeat(w);
+            }).join(' | ') + ' |\n';
+
+            // Data Rows
+            state.rows.forEach(row => {
+                md += '| ' + row.map((c, i) => pad(c, widths[i], state.align[i])).join(' | ') + ' |\n';
+                html += '    <tr>\n';
+                row.forEach((c, i) => {
+                    const alignCSS = state.align[i] !== 'none' ? ` style="text-align: ${state.align[i]}"` : '';
+                    html += `      <td${alignCSS}>${c || '&nbsp;'}</td>\n`;
+                });
+                html += '    </tr>\n';
+            });
+            html += '  </tbody>\n</table>';
+
+            // Inject Output
+            mdOutput.value = md;
+            htmlPreview.innerHTML = html;
+        }
+
+        /* =========================================================
+           IMPORT / EXPORT / CLIPBOARD
+           ========================================================= */
+        function copyToClipboard(elementId) {
+            const el = document.getElementById(elementId);
+            navigator.clipboard.writeText(el.value).then(() => showToast('Markdown Copied!'));
+        }
+
+        function copyHTML() {
+            const md = mdOutput.value;
+            if(!md) return;
+            navigator.clipboard.writeText(htmlPreview.innerHTML).then(() => showToast('HTML Copied!'));
+        }
+
+        function exportCSV() {
+            let csv = state.headers.join(',') + '\n';
+            state.rows.forEach(r => {
+                csv += r.map(c => `"${c.replace(/"/g, '""')}"`).join(',') + '\n';
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'table_export.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+            showToast('Exported to CSV');
+        }
+
+        function importCSV(e) {
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const text = event.target.result;
+                const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+                if(lines.length > 0) {
+                    // Very basic CSV split for demo (handles basic comma separation)
+                    const parseLine = (l) => l.split(',').map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"'));
+                    state.headers = parseLine(lines[0]);
+                    state.align = new Array(state.headers.length).fill('none');
+                    state.rows = lines.slice(1).map(parseLine);
+                    // normalize row lengths
+                    state.rows.forEach(r => { while(r.length < state.headers.length) r.push(''); });
+                    renderTable();
+                    showToast('CSV Imported');
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = ''; // reset
+        }
+
+        // Markdown Parsing
+        const modal = document.getElementById('importModal');
+        const modalContent = document.getElementById('importModalContent');
+        const importTextarea = document.getElementById('importTextarea');
+
+        function openImportModal() {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+                importTextarea.focus();
+            }, 10);
+        }
+
+        function closeImportModal() {
+            modal.classList.add('opacity-0');
+            modalContent.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                importTextarea.value = '';
+            }, 300);
+        }
+
+        function executeImport() {
+            const md = importTextarea.value.trim();
+            if(!md) return closeImportModal();
+
+            const lines = md.split('\n').map(l => l.trim()).filter(l => l.startsWith('|'));
+            if(lines.length < 2) {
+                alert("Invalid markdown table format. Ensure lines start with '|'");
                 return;
             }
 
-            // 2. Calculate the maximum width of each column (minimum 3 characters for the '---')
-            const colWidths = new Array(colCount).fill(3);
-            data.forEach(row => {
-                row.forEach((cell, i) => {
-                    if (cell.length > colWidths[i]) {
-                        colWidths[i] = cell.length;
-                    }
-                });
+            const extractCells = (line) => line.split('|').slice(1, -1).map(c => c.trim().replace(/\\\|/g, '|'));
+
+            state.headers = extractCells(lines[0]);
+            
+            // Parse Alignments
+            const sepCells = extractCells(lines[1]);
+            state.align = sepCells.map(c => {
+                const isLeft = c.startsWith(':');
+                const isRight = c.endsWith(':');
+                if(isLeft && isRight) return 'center';
+                if(isLeft) return 'left';
+                if(isRight) return 'right';
+                return 'none';
             });
 
-            let mdString = '';
+            // Parse Rows
+            state.rows = lines.slice(2).map(l => {
+                const row = extractCells(l);
+                while(row.length < state.headers.length) row.push('');
+                return row.slice(0, state.headers.length);
+            });
 
-            // 3. Build Markdown Head
-            const headerData = data[0];
-            mdString += '| ' + headerData.map((cell, i) => cell.padEnd(colWidths[i])).join(' | ') + ' |\n';
+            renderTable();
+            closeImportModal();
+            showToast('Markdown Imported Successfully');
+        }
 
-            // 4. Build Markdown Separator (---)
-            mdString += '| ' + colWidths.map(w => '-'.repeat(w)).join(' | ') + ' |\n';
+        /* =========================================================
+           UX ENHANCEMENTS (Keyboard Nav, Crosshair, Toast)
+           ========================================================= */
+        function highlightCrosshair(rIndex, cIndex) {
+            clearCrosshair();
+            const rows = tBody.querySelectorAll('tr');
+            if(rIndex !== null && rows[rIndex]) {
+                rows[rIndex].classList.add('highlight-row');
+            }
+            
+            // Highlight entire column
+            const allTrs = document.querySelectorAll('#mdTable tr');
+            allTrs.forEach(tr => {
+                const cell = tr.children[cIndex];
+                if(cell) cell.classList.add('highlight-col');
+            });
+        }
 
-            // 5. Build Markdown Body
-            for (let i = 1; i < data.length; i++) {
-                const rowData = data[i];
-                mdString += '| ' + rowData.map((cell, j) => cell.padEnd(colWidths[j])).join(' | ') + ' |\n';
+        function clearCrosshair() {
+            document.querySelectorAll('.highlight-row').forEach(el => el.classList.remove('highlight-row'));
+            document.querySelectorAll('.highlight-col').forEach(el => el.classList.remove('highlight-col'));
+        }
+
+        // Excel-like Arrow Key Navigation
+        document.getElementById('mdTable').addEventListener('keydown', (e) => {
+            const target = e.target;
+            if(!target.classList.contains('cell-input')) return;
+
+            const isHeader = target.dataset.type === 'header';
+            const r = isHeader ? -1 : parseInt(target.dataset.row);
+            const c = parseInt(target.dataset.col);
+
+            let nextR = r;
+            let nextC = c;
+
+            if (e.key === 'ArrowUp') nextR--;
+            else if (e.key === 'ArrowDown') nextR++;
+            else if (e.key === 'ArrowLeft' && target.selectionStart === 0) nextC--;
+            else if (e.key === 'ArrowRight' && target.selectionStart === target.value.length) nextC++;
+            else return; // Let default browser behavior happen (text selection)
+
+            if (nextC < 0) nextC = 0;
+            if (nextC >= state.headers.length) nextC = state.headers.length - 1;
+            
+            if (nextR < -1) nextR = -1;
+            if (nextR >= state.rows.length) nextR = state.rows.length - 1;
+
+            if (nextR !== r || nextC !== c) {
+                e.preventDefault();
+                let nextInput;
+                if (nextR === -1) {
+                    nextInput = document.querySelector(`input[data-type="header"][data-col="${nextC}"]`);
+                } else {
+                    nextInput = document.querySelector(`input[data-type="cell"][data-row="${nextR}"][data-col="${nextC}"]`);
+                }
+                if (nextInput) {
+                    nextInput.focus();
+                    // Move cursor to end to be safe
+                    setTimeout(() => nextInput.setSelectionRange(nextInput.value.length, nextInput.value.length), 0);
+                }
+            }
+        });
+
+        function showToast(msg, type='success') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            
+            const icon = document.getElementById('toastIcon');
+            if(type === 'error') {
+                icon.className = "w-5 h-5 text-red-400";
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>';
+            } else {
+                icon.className = "w-5 h-5 text-emerald-400";
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>';
             }
 
-            // 6. Update Output
-            mdOutput.value = mdString;
-        }
-
-        // Copy generated Markdown to Clipboard with visually smooth Toast
-        function copyToClipboard() {
-            if (!mdOutput.value) return;
+            toast.classList.remove('opacity-0');
+            toast.classList.add('toast-show');
             
-            navigator.clipboard.writeText(mdOutput.value).then(() => {
-                const toast = document.getElementById('toast');
-                toast.classList.remove('opacity-0');
-                toast.classList.add('toast-show');
-                
-                setTimeout(() => {
-                    toast.classList.remove('toast-show');
-                    toast.classList.add('opacity-0');
-                }, 3000);
-            }).catch(err => {
-                console.error('Failed to copy text: ', err);
-            });
+            setTimeout(() => {
+                toast.classList.remove('toast-show');
+                toast.classList.add('opacity-0');
+            }, 3000);
         }
 
-        // Boot the app
-        init();
+        // Initialize Application
+        renderTable();
+        
     </script>
 </body>
 </html>
