@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SECURE.SYS // Encrypter Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-green: #00ff41;
+            --neon-green-dim: rgba(0, 255, 65, 0.2);
+            --bg-dark: #0a0a0a;
+            --panel-bg: rgba(10, 10, 10, 0.75);
+            --alert-red: #ff003c;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: var(--bg-dark);
+            color: var(--neon-green);
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        ::selection { background: var(--neon-green); color: black; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: var(--neon-green-dim); border: 1px solid var(--neon-green); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--neon-green); }
+
+        /* Background Canvas */
+        #matrixCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; opacity: 0.3; }
+
+        /* Glassmorphism & Hacker Styling */
+        .cyber-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--neon-green-dim);
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.05);
+            transition: all 0.3s ease;
+        }
+        .cyber-panel:focus-within {
+            border-color: var(--neon-green);
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
+        }
+
+        .cyber-input {
+            background: transparent;
+            color: var(--neon-green);
+            border: none;
+            outline: none;
+            width: 100%;
+            resize: none;
+        }
+        .cyber-input::placeholder { color: rgba(0, 255, 65, 0.4); }
+
+        .cyber-btn {
+            background: transparent;
+            border: 1px solid var(--neon-green);
+            color: var(--neon-green);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .cyber-btn:hover {
+            background: var(--neon-green);
+            color: black;
+            box-shadow: 0 0 15px var(--neon-green);
+        }
+        .cyber-btn.danger {
+            border-color: var(--alert-red);
+            color: var(--alert-red);
+        }
+        .cyber-btn.danger:hover {
+            background: var(--alert-red);
+            color: white;
+            box-shadow: 0 0 15px var(--alert-red);
+        }
+
+        /* Glitch Animation */
+        .glitch { position: relative; display: inline-block; }
+        .glitch::before, .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-dark);
+        }
+        .glitch::before { left: 2px; text-shadow: -1px 0 red; clip: rect(24px, 550px, 90px, 0); animation: glitch-anim-2 3s infinite linear alternate-reverse; }
+        .glitch::after { left: -2px; text-shadow: -1px 0 blue; clip: rect(85px, 550px, 140px, 0); animation: glitch-anim 2.5s infinite linear alternate-reverse; }
+        @keyframes glitch-anim { 0% { clip: rect(10px, 9999px, 44px, 0); } 100% { clip: rect(85px, 9999px, 11px, 0); } }
+        @keyframes glitch-anim-2 { 0% { clip: rect(65px, 9999px, 100px, 0); } 100% { clip: rect(10px, 9999px, 50px, 0); } }
+
+        /* Toast */
+        #toastContainer { position: fixed; bottom: 20px; right: 20px; z-index: 50; display: flex; flex-direction: column; gap: 10px; }
+        .toast { padding: 12px 20px; border: 1px solid; border-radius: 4px; backdrop-filter: blur(5px); animation: slideIn 0.3s ease-out forwards; }
+        .toast.success { border-color: var(--neon-green); background: rgba(0, 255, 65, 0.1); color: var(--neon-green); }
+        .toast.error { border-color: var(--alert-red); background: rgba(255, 0, 60, 0.1); color: var(--alert-red); }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Terminal Window */
+        #terminalOutput { font-size: 0.85rem; line-height: 1.4; color: #aaa; }
+        .log-time { color: #555; }
+        .log-info { color: #00ff41; }
+        .log-warn { color: #ffb86c; }
+        .log-err { color: var(--alert-red); }
+
+        .drop-zone-active { border: 2px dashed var(--neon-green) !important; background: rgba(0, 255, 65, 0.1) !important; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- Matrix Background -->
+    <canvas id="matrixCanvas"></canvas>
+
+    <div class="w-full max-w-6xl flex flex-col gap-6 z-10 relative mt-4">
+        
+        <!-- Header -->
+        <header class="flex justify-between items-end border-b border-[#00ff4133] pb-4">
+            <div>
+                <h1 class="text-3xl font-bold glitch uppercase tracking-widest" data-text="Aegis_Crypt">Aegis_Crypt</h1>
+                <p class="text-xs mt-1 opacity-70">AES-256-GCM + PBKDF2 Encrypted Terminal // SECURE LINK</p>
+            </div>
+            <div class="text-xs text-right opacity-70 hidden sm:block">
+                <span id="clock">00:00:00</span> <br>
+                STATUS: <span class="text-[#00ff41] animate-pulse">ONLINE & SECURE</span>
+            </div>
+        </header>
+
+        <!-- Main Interface -->
+        <main class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- Left Column: Input -->
+            <div class="flex flex-col gap-4">
+                <div class="cyber-panel p-4 rounded-md flex-1 flex flex-col relative" id="dropZone">
+                    <div class="flex justify-between items-center mb-2 border-b border-[#00ff4133] pb-2">
+                        <label class="text-sm font-bold tracking-widest">INPUT_DATA</label>
+                        <span class="text-xs opacity-50" id="charCount">0 BYTES</span>
+                    </div>
+                    <textarea id="inputText" class="cyber-input flex-1 h-64 sm:h-80 text-sm leading-relaxed" placeholder="> Enter plaintext to encrypt or Base64 payload to decrypt...&#10;> Drag & drop text files here..."></textarea>
+                    
+                    <div class="flex justify-between mt-3 pt-3 border-t border-[#00ff4133]">
+                        <button onclick="document.getElementById('inputText').value = ''; updateCharCount();" class="text-xs hover:text-white transition-colors opacity-70 hover:opacity-100">[ CLEAR ]</button>
+                        <button onclick="copyToClipboard('inputText')" class="text-xs hover:text-white transition-colors opacity-70 hover:opacity-100">[ COPY ]</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Controls & Output -->
+            <div class="flex flex-col gap-4">
+                
+                <!-- Security Controls -->
+                <div class="cyber-panel p-4 rounded-md">
+                    <label class="text-sm font-bold tracking-widest border-b border-[#00ff4133] pb-2 mb-4 block flex justify-between">
+                        <span>ENCRYPTION_KEY</span>
+                        <button id="togglePwdBtn" class="text-xs opacity-70 hover:opacity-100">[ SHOW ]</button>
+                    </label>
+                    <div class="flex flex-col gap-2">
+                        <input type="password" id="password" class="cyber-input text-lg border-b border-[#00ff4133] pb-2" placeholder="> Secret Passphrase">
+                        
+                        <!-- Strength Meter -->
+                        <div class="h-1 w-full bg-gray-800 mt-1 rounded overflow-hidden">
+                            <div id="pwdStrength" class="h-full bg-red-500 w-0 transition-all duration-300"></div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mt-6">
+                        <button id="btnEncrypt" class="cyber-btn py-3 rounded text-sm font-bold flex justify-center items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                            ENCRYPT
+                        </button>
+                        <button id="btnDecrypt" class="cyber-btn danger py-3 rounded text-sm font-bold flex justify-center items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path></svg>
+                            DECRYPT
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Output Area -->
+                <div class="cyber-panel p-4 rounded-md flex-1 flex flex-col relative">
+                    <div class="flex justify-between items-center mb-2 border-b border-[#00ff4133] pb-2">
+                        <label class="text-sm font-bold tracking-widest">OUTPUT_DATA</label>
+                    </div>
+                    <textarea id="outputText" class="cyber-input flex-1 h-32 text-sm leading-relaxed" readonly placeholder="> Awaiting operation..."></textarea>
+                    
+                    <div class="flex justify-end gap-4 mt-3 pt-3 border-t border-[#00ff4133]">
+                        <button onclick="downloadFile()" class="text-xs hover:text-white transition-colors opacity-70 hover:opacity-100 flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            [ DOWNLOAD ]
+                        </button>
+                        <button onclick="copyToClipboard('outputText')" class="text-xs hover:text-white transition-colors opacity-70 hover:opacity-100">
+                            [ COPY RESULT ]
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- Process Terminal Log -->
+        <footer class="cyber-panel p-4 rounded-md h-40 overflow-y-auto flex flex-col" id="terminalBox">
+            <div class="text-xs font-bold border-b border-[#00ff4133] pb-2 mb-2 sticky top-0 bg-[#0a0a0ae6] backdrop-blur-sm">SYSTEM_LOG</div>
+            <div id="terminalOutput" class="font-mono flex flex-col gap-1">
+                <div><span class="log-time">[*]</span> System initialized. Web Crypto API supported.</div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+
+    <script>
+        /** 
+         * CRYPTOGRAPHY ENGINE 
+         * Utilizing Native window.crypto.subtle
+         */
+        const cryptoLog = (msg, type = 'info') => {
+            const out = document.getElementById('terminalOutput');
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: "numeric", minute: "numeric", second: "numeric", fractionalSecondDigits: 2 });
+            let typeClass = type === 'info' ? 'log-info' : (type === 'err' ? 'log-err' : 'log-warn');
+            out.innerHTML += `<div><span class="log-time">[${time}]</span> <span class="${typeClass}">> ${msg}</span></div>`;
+            const box = document.getElementById('terminalBox');
+            box.scrollTop = box.scrollHeight;
+        };
+
+        const encoder = new TextEncoder();
+        const decoder = new TextDecoder();
+
+        // 1. Derive Base Key from Password
+        async function getPasswordKey(password) {
+            cryptoLog("Importing raw password key...");
+            return await window.crypto.subtle.importKey(
+                "raw",
+                encoder.encode(password),
+                "PBKDF2",
+                false,
+                ["deriveKey"]
+            );
+        }
+
+        // 2. Derive AES-GCM Key using PBKDF2 with Salt
+        async function deriveKey(passwordKey, salt) {
+            cryptoLog("Deriving AES-256-GCM key via PBKDF2 (100,000 iterations)...");
+            return await window.crypto.subtle.deriveKey(
+                {
+                    name: "PBKDF2",
+                    salt: salt,
+                    iterations: 100000,
+                    hash: "SHA-256"
+                },
+                passwordKey,
+                { name: "AES-GCM", length: 256 },
+                false,
+                ["encrypt", "decrypt"]
+            );
+        }
+
+        // Helper: Uint8Array to Base64 (Robust approach)
+        function bufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            const len = bytes.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        }
+
+        // Helper: Base64 to Uint8Array
+        function base64ToBuffer(base64) {
+            const binary_string = window.atob(base64);
+            const len = binary_string.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binary_string.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        // CORE ENCRYPT
+        async function encryptData(text, password) {
+            try {
+                cryptoLog("Initiating Encryption Protocol...", "warn");
+                
+                const salt = window.crypto.getRandomValues(new Uint8Array(16));
+                cryptoLog(`Generated random 16-byte Salt: ${bufferToBase64(salt).substring(0,8)}...`);
+                
+                const iv = window.crypto.getRandomValues(new Uint8Array(12));
+                cryptoLog(`Generated random 12-byte IV for AES-GCM: ${bufferToBase64(iv).substring(0,8)}...`);
+
+                const passwordKey = await getPasswordKey(password);
+                const aesKey = await deriveKey(passwordKey, salt);
+
+                cryptoLog("Encrypting payload...");
+                const encryptedContent = await window.crypto.subtle.encrypt(
+                    { name: "AES-GCM", iv: iv },
+                    aesKey,
+                    encoder.encode(text)
+                );
+
+                // Construct Package: [SALT (16)] + [IV (12)] + [CIPHERTEXT]
+                const encryptedBytes = new Uint8Array(encryptedContent);
+                const payload = new Uint8Array(salt.length + iv.length + encryptedBytes.length);
+                payload.set(salt, 0);
+                payload.set(iv, salt.length);
+                payload.set(encryptedBytes, salt.length + iv.length);
+                
+                cryptoLog("Payload packaged and Base64 encoded successfully.", "info");
+                return bufferToBase64(payload);
+
+            } catch (err) {
+                cryptoLog(`Encryption Failed: ${err.message}`, "err");
+                throw err;
+            }
+        }
+
+        // CORE DECRYPT
+        async function decryptData(base64Ciphertext, password) {
+            try {
+                cryptoLog("Initiating Decryption Protocol...", "warn");
+                
+                cryptoLog("Decoding Base64 payload...");
+                const payloadBuffer = base64ToBuffer(base64Ciphertext);
+                const payload = new Uint8Array(payloadBuffer);
+                
+                if(payload.length < 28) throw new Error("Payload too short or corrupted.");
+
+                // Extract package
+                const salt = payload.slice(0, 16);
+                const iv = payload.slice(16, 28);
+                const ciphertext = payload.slice(28);
+
+                cryptoLog("Extracted Salt and IV from payload.");
+
+                const passwordKey = await getPasswordKey(password);
+                const aesKey = await deriveKey(passwordKey, salt);
+
+                cryptoLog("Decrypting and authenticating ciphertext with AES-GCM...");
+                const decryptedContent = await window.crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv: iv },
+                    aesKey,
+                    ciphertext
+                );
+
+                cryptoLog("Decryption successful. Plaintext recovered.", "info");
+                return decoder.decode(decryptedContent);
+
+            } catch (err) {
+                cryptoLog(`Decryption Failed. Incorrect password or corrupted data.`, "err");
+                throw err;
+            }
+        }
+
+        /**
+         * UI / UX LOGIC
+         */
+
+        // Clock
+        setInterval(() => {
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString('en-US', { hour12: false });
+        }, 1000);
+
+        // Inputs & Elements
+        const elInput = document.getElementById('inputText');
+        const elOutput = document.getElementById('outputText');
+        const elPassword = document.getElementById('password');
+        const btnEnc = document.getElementById('btnEncrypt');
+        const btnDec = document.getElementById('btnDecrypt');
+
+        // Character Count
+        const updateCharCount = () => {
+            const len = encoder.encode(elInput.value).length;
+            document.getElementById('charCount').innerText = `${len} BYTES`;
+        };
+        elInput.addEventListener('input', updateCharCount);
+
+        // Password Strength
+        elPassword.addEventListener('input', (e) => {
+            const val = e.target.value;
+            let score = 0;
+            if (val.length > 5) score += 25;
+            if (val.length > 10) score += 25;
+            if (/[A-Z]/.test(val)) score += 20;
+            if (/[0-9]/.test(val)) score += 15;
+            if (/[^A-Za-z0-9]/.test(val)) score += 15;
+            
+            const bar = document.getElementById('pwdStrength');
+            bar.style.width = `${Math.min(score, 100)}%`;
+            if (score < 40) bar.style.backgroundColor = '#ff003c';
+            else if (score < 80) bar.style.backgroundColor = '#ffb86c';
+            else bar.style.backgroundColor = '#00ff41';
+        });
+
+        // Toggle Password Visibility
+        document.getElementById('togglePwdBtn').addEventListener('click', (e) => {
+            if (elPassword.type === 'password') {
+                elPassword.type = 'text';
+                e.target.innerText = '[ HIDE ]';
+            } else {
+                elPassword.type = 'password';
+                e.target.innerText = '[ SHOW ]';
+            }
+        });
+
+        // Toast System
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = type === 'success' ? `[OK] ${msg}` : `[ERR] ${msg}`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Copy
+        function copyToClipboard(id) {
+            const txt = document.getElementById(id).value;
+            if (!txt) return showToast('Nothing to copy.', 'error');
+            navigator.clipboard.writeText(txt).then(() => {
+                showToast('Copied to clipboard.');
+                cryptoLog(`Copied content from ${id} to clipboard.`);
+            });
+        }
+
+        // Download
+        function downloadFile() {
+            const txt = elOutput.value;
+            if (!txt) return showToast('No output to download.', 'error');
+            const blob = new Blob([txt], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `Aegis_Output_${new Date().getTime()}.txt`;
+            a.click();
+            cryptoLog("Exported output to text file.");
+        }
+
+        // Drag & Drop
+        const dropZone = document.getElementById('dropZone');
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drop-zone-active'); });
+        dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('drop-zone-active'); });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drop-zone-active');
+            if (e.dataTransfer.files.length) {
+                const file = e.dataTransfer.files[0];
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    elInput.value = e.target.result;
+                    updateCharCount();
+                    cryptoLog(`Loaded file: ${file.name}`);
+                    showToast('File loaded successfully.');
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        // Action Buttons
+        btnEnc.addEventListener('click', async () => {
+            if (!elInput.value) return showToast('Input is empty.', 'error');
+            if (!elPassword.value) return showToast('Password is required.', 'error');
+            try {
+                const res = await encryptData(elInput.value, elPassword.value);
+                elOutput.value = res;
+                showToast('Encryption Complete.');
+            } catch (e) {
+                showToast('Encryption failed.', 'error');
+            }
+        });
+
+        btnDec.addEventListener('click', async () => {
+            if (!elInput.value) return showToast('Input is empty.', 'error');
+            if (!elPassword.value) return showToast('Password is required.', 'error');
+            try {
+                // Remove whitespace/newlines that might be in copied base64
+                const cleanInput = elInput.value.replace(/\s+/g, '');
+                const res = await decryptData(cleanInput, elPassword.value);
+                elOutput.value = res;
+                showToast('Decryption Complete.');
+            } catch (e) {
+                showToast('Decryption failed. Bad key or corrupted payload.', 'error');
+            }
+        });
+
+        /**
+         * EYE CANDY: Matrix Rain Canvas
+         */
+        const canvas = document.getElementById('matrixCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()_+-=[]{}|;:,.<>?~';
+        const fontSize = 14;
+        const columns = canvas.width / fontSize;
+        const drops =[];
+        for (let x = 0; x < columns; x++) drops[x] = 1;
+
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(10, 10, 10, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#0F0';
+            ctx.font = fontSize + 'px monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = chars.charAt(Math.floor(Math.random() * chars.length));
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
+            }
+        }
+        setInterval(drawMatrix, 33);
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>
