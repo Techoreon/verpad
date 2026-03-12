@@ -1,455 +1,774 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Offline Startpage</title>
-    <style>
-        /* Pure CSS - No external dependencies required */
-        :root {
-            --bg: #0a0a0a;
-            --surface: rgba(255, 255, 255, 0.05);
-            --surface-hover: rgba(255, 255, 255, 0.1);
-            --border: rgba(255, 255, 255, 0.1);
-            --border-hover: rgba(255, 255, 255, 0.2);
-            --text-main: #ffffff;
-            --text-muted: rgba(255, 255, 255, 0.5);
-            --accent: #3b82f6;
-            --accent-hover: #2563eb;
-            --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        }
+    <title>OmniMark Ultimate | Cloud Studio</title>
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Vditor (Advanced WYSIWYG Markdown Editor) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vditor@3.9.6/dist/index.css" />
+    <script src="https://cdn.jsdelivr.net/npm/vditor@3.9.6/dist/index.min.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- CryptoJS for File Encryption -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
+    <style>
+        /* Robust Theme System using CSS Variables */
+        :root[data-theme="dark"] {
+            --bg-app: #0f172a; --bg-panel: #1e293b; --bg-hover: #334155;
+            --text-main: #f8fafc; --text-muted: #94a3b8;
+            --accent: #6366f1; --accent-hover: #4f46e5;
+            --border-color: #334155;
+        }
+        :root[data-theme="light"] {
+            --bg-app: #f1f5f9; --bg-panel: #ffffff; --bg-hover: #e2e8f0;
+            --text-main: #0f172a; --text-muted: #64748b;
+            --accent: #3b82f6; --accent-hover: #2563eb;
+            --border-color: #cbd5e1;
+        }
+        :root[data-theme="matrix"] {
+            --bg-app: #050505; --bg-panel: #0a0a0a; --bg-hover: #112211;
+            --text-main: #00ff41; --text-muted: #008f11;
+            --accent: #00ff41; --accent-hover: #00cc33;
+            --border-color: #004400;
+        }
 
         body {
-            background-color: var(--bg);
+            background-color: var(--bg-app);
             color: var(--text-main);
-            font-family: var(--font-sans);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             overflow: hidden;
-            position: relative;
+            transition: background-color 0.3s, color 0.3s;
         }
 
-        /* Ambient Orbs */
-        .orb {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(100px);
-            z-index: -1;
-            opacity: 0.4;
-            animation: float 20s infinite alternate ease-in-out;
-        }
-        .orb-1 { top: -10%; left: -10%; width: 50vw; height: 50vw; background: rgba(59, 130, 246, 0.2); }
-        .orb-2 { bottom: -10%; right: -10%; width: 40vw; height: 40vw; background: rgba(139, 92, 246, 0.2); animation-delay: -10s; }
+        .theme-panel { background-color: var(--bg-panel); border-color: var(--border-color); }
+        .theme-hover:hover { background-color: var(--bg-hover); }
+        .theme-text-muted { color: var(--text-muted); }
+        .theme-border { border-color: var(--border-color); }
+        .theme-accent { background-color: var(--accent); color: #fff; }
+        .theme-accent:hover { background-color: var(--accent-hover); }
 
-        @keyframes float {
-            0% { transform: translate(0, 0) scale(1); }
-            100% { transform: translate(5%, 10%) scale(1.1); }
-        }
-
-        main {
-            width: 100%;
-            max-width: 900px;
-            padding: 2rem;
-            z-index: 10;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        /* Header */
-        header { text-align: center; margin-bottom: 3rem; user-select: none; }
-        #greeting { font-size: 1.2rem; font-weight: 300; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 0.5rem; }
-        #clock { font-size: 6rem; font-weight: 700; letter-spacing: -2px; text-shadow: 0 10px 30px rgba(0,0,0,0.5); line-height: 1; }
-        #date { font-size: 1rem; color: var(--text-muted); margin-top: 1rem; font-weight: 500; }
-
-        /* Search */
-        .search-container {
-            width: 100%;
-            max-width: 600px;
-            position: relative;
-            margin-bottom: 4rem;
-        }
-        .search-icon {
-            position: absolute;
-            left: 1.2rem;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 20px;
-            height: 20px;
-            fill: var(--text-muted);
-            transition: fill 0.3s;
-            pointer-events: none;
-        }
-        .search-input:focus ~ .search-icon { fill: var(--accent); }
-        
-        .search-input {
-            width: 100%;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 1.5rem;
-            padding: 1.2rem 1.2rem 1.2rem 3.5rem;
-            font-size: 1.1rem;
-            color: var(--text-main);
-            backdrop-filter: blur(10px);
-            outline: none;
-            transition: all 0.3s;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        .search-input::placeholder { color: rgba(255,255,255,0.3); }
-        .search-input:focus {
-            background: var(--surface-hover);
-            border-color: rgba(59, 130, 246, 0.5);
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2), 0 10px 30px rgba(0,0,0,0.3);
-        }
-
-        /* Bookmarks Grid */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-            gap: 1.5rem;
-            width: 100%;
-            max-height: 40vh;
-            overflow-y: auto;
-            padding: 1rem;
-        }
-
-        ::-webkit-scrollbar { width: 6px; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
-        .card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 1rem;
-            padding: 1.5rem 1rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-decoration: none;
-            color: var(--text-main);
-            transition: all 0.2s;
-            backdrop-filter: blur(10px);
-            position: relative;
-            cursor: pointer;
-            aspect-ratio: 1;
-        }
-        .card:hover {
-            background: var(--surface-hover);
-            border-color: var(--border-hover);
-            transform: translateY(-4px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        }
+        /* Vditor Overrides for seamless integration */
+        .vditor { border: none !important; border-radius: 0 !important; background-color: transparent !important; }
+        .vditor-toolbar { border-bottom: 1px solid var(--border-color) !important; background-color: var(--bg-panel) !important; padding-left: 1rem !important;}
         
-        .card-icon {
-            width: 36px;
-            height: 36px;
-            margin-bottom: 0.8rem;
-            transition: transform 0.2s;
-        }
-        .card:hover .card-icon { transform: scale(1.1); }
+        /* Command Palette Animation */
+        #cmd-palette, #pwd-modal { display: none; }
+        #cmd-palette.active, #pwd-modal.active { display: flex; animation: fadeIn 0.15s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
         
-        .card-title {
-            font-size: 0.8rem;
-            font-weight: 500;
-            color: var(--text-muted);
-            text-align: center;
-            width: 100%;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            transition: color 0.2s;
-        }
-        .card:hover .card-title { color: var(--text-main); }
+        .cmd-item.selected { background-color: var(--accent); color: white !important; }
 
-        .btn-delete {
-            position: absolute;
-            top: -8px;
-            right: -8px;
-            width: 24px;
-            height: 24px;
-            background: #ef4444;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
-            opacity: 0;
-            transform: scale(0.8);
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .card:hover .btn-delete { opacity: 1; transform: scale(1); }
-        .btn-delete:hover { background: #dc2626; }
-
-        .card-add {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px dashed var(--border);
-        }
-        .card-add:hover {
-            border-color: var(--text-muted);
-            background: var(--surface);
-        }
-
-        /* Modal */
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(8px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s;
-            z-index: 100;
-        }
-        .modal-overlay.active { opacity: 1; pointer-events: auto; }
-        
-        .modal {
-            background: #121212;
-            border: 1px solid var(--border);
-            width: 100%;
-            max-width: 400px;
-            border-radius: 1.5rem;
-            padding: 2rem;
-            transform: scale(0.95) translateY(10px);
-            transition: all 0.3s;
-            position: relative;
-        }
-        .modal-overlay.active .modal { transform: scale(1) translateY(0); }
-        
-        .modal h3 { font-size: 1.5rem; margin-bottom: 1.5rem; font-weight: 600; }
-        .modal-close {
-            position: absolute;
-            top: 1.5rem; right: 1.5rem;
-            background: none; border: none; cursor: pointer;
-            fill: var(--text-muted); width: 24px; height: 24px;
-        }
-        .modal-close:hover { fill: var(--text-main); }
-
-        .form-group { margin-bottom: 1.2rem; }
-        .form-group label { display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; letter-spacing: 1px; font-weight: 600;}
-        .form-group input {
-            width: 100%; background: var(--surface); border: 1px solid var(--border);
-            border-radius: 0.8rem; padding: 0.8rem 1rem; color: var(--text-main); font-size: 1rem; outline: none; transition: border 0.2s;
-        }
-        .form-group input:focus { border-color: var(--accent); background: var(--surface-hover); }
-        
-        .btn-submit {
-            width: 100%; background: var(--accent); color: white; border: none;
-            padding: 1rem; border-radius: 0.8rem; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s; margin-top: 1rem;
-        }
-        .btn-submit:hover { background: var(--accent-hover); }
-
-        @media (max-width: 600px) {
-            #clock { font-size: 4rem; }
-            .grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 1rem; }
-        }
+        /* Focus Mode */
+        body.focus-mode #sidebar { display: none !important; }
+        body.focus-mode #app-header { display: none !important; }
     </style>
 </head>
-<body>
+<body class="h-screen w-screen flex flex-col">
 
-    <!-- Ambient Background -->
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-
-    <main>
-        <!-- Header: Greeting & Clock -->
-        <header>
-            <h2 id="greeting">Good Day</h2>
-            <h1 id="clock">00:00</h1>
-            <p id="date">Loading...</p>
-        </header>
-
-        <!-- Google Search Form -->
-        <form action="https://google.com/search" method="GET" class="search-container">
-            <input type="text" name="q" id="search-input" class="search-input" placeholder="Search the web..." autocomplete="off" autofocus>
-            <!-- Search Icon SVG -->
-            <svg class="search-icon" viewBox="0 0 24 24">
-                <path d="M10 2a8 8 0 105.293 13.88l4.414 4.413a1 1 0 001.414-1.414l-4.414-4.414A8 8 0 0010 2zm0 2a6 6 0 110 12 6 6 0 010-12z"/>
-            </svg>
-        </form>
-
-        <!-- Bookmarks Grid -->
-        <div id="bookmarks-grid" class="grid">
-            <!-- Bookmarks injected via JS -->
-        </div>
-    </main>
-
-    <!-- Add Bookmark Modal -->
-    <div id="modal" class="modal-overlay">
-        <div class="modal">
-            <button onclick="closeModal()" class="modal-close">
-                <svg viewBox="0 0 24 24"><path d="M18.3 5.71a.996.996 0 00-1.41 0L12 10.59 7.11 5.7A.996.996 0 105.7 7.11L10.59 12 5.7 16.89a.996.996 0 101.41 1.41L12 13.41l4.89 4.89a.996.996 0 101.41-1.41L13.41 12l4.89-4.89c.38-.38.38-1.02 0-1.4z"/></svg>
+    <!-- Top Navbar -->
+    <header id="app-header" class="h-14 theme-panel border-b theme-border flex items-center justify-between px-4 shrink-0 z-20 shadow-sm transition-all">
+        <div class="flex items-center gap-4">
+            <button onclick="toggleSidebar()" class="p-2 theme-hover rounded-lg transition" title="Toggle Sidebar">
+                <i data-lucide="panel-left" class="w-5 h-5"></i>
             </button>
-            <h3>Add Bookmark</h3>
-            <form id="add-bookmark-form">
-                <div class="form-group">
-                    <label>Website Name</label>
-                    <input type="text" id="bm-title" required placeholder="e.g., GitHub">
+            <div class="flex items-center gap-2 font-bold text-lg tracking-wider" style="color: var(--accent)">
+                <i data-lucide="hexagon"></i> OmniMark
+            </div>
+            <div class="h-6 w-px theme-border border-l mx-2"></div>
+            
+            <div class="flex items-center gap-2">
+                <div onclick="copyWorkspaceLink()" class="flex items-center gap-1.5 px-2 py-1 theme-hover rounded cursor-pointer border theme-border transition" title="Copy Cloud Workspace Link">
+                    <i data-lucide="cloud" class="w-4 h-4 text-emerald-500"></i>
+                    <span id="workspace-id-display" class="text-xs font-mono font-semibold text-amber-500">Connecting...</span>
                 </div>
-                <div class="form-group">
-                    <label>URL</label>
-                    <input type="url" id="bm-url" required placeholder="https://github.com">
+                <div class="h-5 w-px theme-border border-l mx-1"></div>
+                <i data-lucide="file-text" class="w-4 h-4 theme-text-muted"></i>
+                <input type="text" id="doc-title" value="Untitled Document" class="bg-transparent border-none outline-none font-semibold px-2 py-1 rounded theme-hover transition w-56" placeholder="Document Title...">
+                <i id="lock-indicator" data-lucide="lock" class="w-4 h-4 text-rose-500 hidden" title="Encrypted File"></i>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-1">
+            <span id="save-status" class="text-xs theme-text-muted mr-4 flex items-center gap-1 w-20 justify-end">
+                <i data-lucide="check" class="w-3 h-3 text-emerald-500"></i> Saved
+            </span>
+            <button onclick="toggleDictation()" id="btn-dictate" class="p-2 theme-hover rounded-lg transition text-rose-400" title="Voice Dictation">
+                <i data-lucide="mic" class="w-5 h-5"></i>
+            </button>
+            <button onclick="readAloud()" class="p-2 theme-hover rounded-lg transition" title="Read Aloud">
+                <i data-lucide="volume-2" class="w-5 h-5"></i>
+            </button>
+            <button onclick="lockCurrentFile()" class="p-2 theme-hover rounded-lg transition text-amber-500" title="Encrypt & Lock File">
+                <i data-lucide="shield" class="w-5 h-5"></i>
+            </button>
+            <button onclick="openCmd()" class="ml-2 px-3 py-1.5 theme-accent rounded-lg transition text-sm flex items-center gap-2 font-medium shadow-md">
+                <i data-lucide="terminal" class="w-4 h-4"></i> Cmd (Ctrl+K)
+            </button>
+        </div>
+    </header>
+
+    <!-- Main App Area -->
+    <div class="flex flex-1 overflow-hidden relative">
+        
+        <!-- Sidebar -->
+        <aside id="sidebar" class="w-72 theme-panel border-r theme-border flex flex-col shrink-0 transition-all duration-300 z-10 relative">
+            
+            <div class="p-3 border-b theme-border flex gap-2">
+                <button onclick="createNewFile()" class="flex-1 theme-accent py-2 rounded-lg text-sm font-semibold transition shadow-md flex items-center justify-center gap-1">
+                    <i data-lucide="plus" class="w-4 h-4"></i> New Note
+                </button>
+            </div>
+
+            <!-- File Explorer -->
+            <div class="flex-1 overflow-y-auto p-2 flex flex-col gap-1" id="file-list">
+                <!-- Files injected via JS -->
+            </div>
+
+            <!-- Document Insights -->
+            <div class="h-1/3 border-t theme-border flex flex-col bg-black/5">
+                <div class="p-3 text-xs font-bold uppercase tracking-wider theme-text-muted flex items-center gap-2 border-b theme-border">
+                    <i data-lucide="activity" class="w-4 h-4"></i> Insights
                 </div>
-                <button type="submit" class="btn-submit">Save Bookmark</button>
-            </form>
+                <div class="p-4 text-sm flex flex-col gap-3 overflow-y-auto">
+                    <div class="flex justify-between items-center">
+                        <span class="theme-text-muted">Words</span>
+                        <span id="stat-words" class="font-mono font-bold">0</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="theme-text-muted">Characters</span>
+                        <span id="stat-chars" class="font-mono font-bold">0</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="theme-text-muted">Read Time</span>
+                        <span id="stat-time" class="font-mono font-bold" style="color: var(--accent)">0 min</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Vditor Editor Area -->
+        <div id="editor-wrapper" class="flex-1 flex flex-col relative bg-[var(--bg-app)]">
+            <!-- Vditor Native Div -->
+            <div id="vditor" class="w-full h-full"></div>
+            
+            <!-- Dictation Overlay -->
+            <div id="dictation-overlay" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-rose-500 text-white px-4 py-2 rounded-full shadow-lg font-medium text-sm flex items-center gap-2 hidden z-50 animate-pulse">
+                <i data-lucide="mic" class="w-4 h-4"></i> Listening... Speak now.
+            </div>
+        </div>
+    </div>
+
+    <!-- Command Palette Modal -->
+    <div id="cmd-palette" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 items-center justify-center">
+        <div class="theme-panel w-full max-w-lg rounded-xl shadow-2xl border theme-border overflow-hidden flex flex-col">
+            <div class="p-4 border-b theme-border flex items-center gap-3">
+                <i data-lucide="search" class="w-5 h-5 theme-text-muted"></i>
+                <input type="text" id="cmd-input" class="w-full bg-transparent border-none outline-none text-lg placeholder-gray-500" placeholder="Type a command...">
+            </div>
+            <div id="cmd-list" class="max-h-72 overflow-y-auto py-2">
+                <!-- Commands injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Prompt Modal -->
+    <div id="pwd-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 items-center justify-center">
+        <div class="theme-panel w-full max-w-sm rounded-xl shadow-2xl border theme-border p-6 flex flex-col items-center text-center">
+            <div class="w-12 h-12 rounded-full bg-rose-500/20 flex items-center justify-center mb-4 text-rose-500">
+                <i data-lucide="lock" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-xl font-bold mb-2">Encrypted Document</h3>
+            <p class="text-sm theme-text-muted mb-6">Enter password to decrypt or lock this file.</p>
+            <input type="password" id="pwd-input" class="w-full bg-[var(--bg-app)] border theme-border rounded-lg px-4 py-2 outline-none focus:border-[var(--accent)] transition mb-4 text-center tracking-widest" placeholder="••••••••">
+            <div class="flex gap-3 w-full">
+                <button onclick="closePwdModal()" class="flex-1 py-2 rounded-lg border theme-border theme-hover transition font-medium">Cancel</button>
+                <button onclick="submitPassword()" class="flex-1 py-2 rounded-lg theme-accent transition font-medium">Confirm</button>
+            </div>
+            <p id="pwd-error" class="text-rose-500 text-xs mt-3 hidden">Incorrect password!</p>
         </div>
     </div>
 
     <!-- Application Logic -->
     <script>
-        // --- 1. Clock & Date Logic ---
-        function updateTime() {
-            const now = new Date();
-            
-            // Format Time
-            const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: false };
-            document.getElementById('clock').textContent = now.toLocaleTimeString([], timeOptions);
-            
-            // Format Date
-            const dateOptions = { weekday: 'long', month: 'long', day: 'numeric' };
-            document.getElementById('date').textContent = now.toLocaleDateString(undefined, dateOptions);
-
-            // Determine Greeting
-            const hour = now.getHours();
-            let greeting = 'Good Evening';
-            if (hour >= 5 && hour < 12) greeting = 'Good Morning';
-            else if (hour >= 12 && hour < 18) greeting = 'Good Afternoon';
-            document.getElementById('greeting').textContent = greeting;
-        }
+        // --- Core State ---
+        let vditor = null;
+        let files = {};
+        let currentFileId = null;
+        let currentSessionPassword = null;
+        let isDictating = false;
+        let recognition = null;
+        let lastTyped = 0; // Tracks when user last typed for sync logic
         
-        setInterval(updateTime, 1000);
-        updateTime();
+        // --- DOM Elements ---
+        const DOM = {
+            docTitle: document.getElementById('doc-title'),
+            fileList: document.getElementById('file-list'),
+            saveStatus: document.getElementById('save-status'),
+            lockIndicator: document.getElementById('lock-indicator'),
+            cmdPalette: document.getElementById('cmd-palette'),
+            cmdInput: document.getElementById('cmd-input'),
+            cmdList: document.getElementById('cmd-list'),
+            pwdModal: document.getElementById('pwd-modal'),
+            pwdInput: document.getElementById('pwd-input'),
+            pwdError: document.getElementById('pwd-error'),
+            statWords: document.getElementById('stat-words'),
+            statChars: document.getElementById('stat-chars'),
+            statTime: document.getElementById('stat-time'),
+            dictateOverlay: document.getElementById('dictation-overlay'),
+            workspaceDisplay: document.getElementById('workspace-id-display')
+        };
 
-        // --- 2. Offline SVG Icon Generator ---
-        // Generates a beautiful initial-based icon if the internet is down
-        function getInitialsSVG(name) {
-            const letter = name.charAt(0).toUpperCase();
-            return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" class="card-icon">
-                <rect width="100" height="100" rx="20" fill="rgba(255,255,255,0.1)"/>
-                <text x="50" y="50" font-size="45" fill="#ffffff" font-family="sans-serif" font-weight="bold" text-anchor="middle" alignment-baseline="central" dy=".1em">${letter}</text>
-            </svg>`;
-        }
-
-        // --- 3. Bookmark State Management ---
-        const defaultBookmarks =[
-            { id: '1', title: 'GitHub', url: 'https://github.com' },
-            { id: '2', title: 'YouTube', url: 'https://youtube.com' },
-            { id: '3', title: 'Reddit', url: 'https://reddit.com' }
-        ];
-
-        let bookmarks = JSON.parse(localStorage.getItem('offline_bookmarks')) || defaultBookmarks;
-
-        function saveBookmarks() {
-            localStorage.setItem('offline_bookmarks', JSON.stringify(bookmarks));
-        }
-
-        // --- 4. Rendering Logic ---
-        function renderBookmarks() {
-            const grid = document.getElementById('bookmarks-grid');
-            grid.innerHTML = '';
-
-            bookmarks.forEach(bm => {
-                // Generate SVG icon from the first letter
-                const iconHTML = getInitialsSVG(bm.title);
-
-                const card = document.createElement('div');
-                card.className = "card";
-                card.innerHTML = `
-                    <a href="${bm.url}" style="display:flex; flex-direction:column; align-items:center; text-decoration:none; width:100%;">
-                        ${iconHTML}
-                        <span class="card-title">${bm.title}</span>
-                    </a>
-                    <button onclick="deleteBookmark('${bm.id}')" class="btn-delete" title="Remove">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                    </button>
-                `;
-                grid.appendChild(card);
-            });
-
-            // "Add New" Button
-            const addBtn = document.createElement('div');
-            addBtn.onclick = openModal;
-            addBtn.className = "card card-add";
-            addBtn.innerHTML = `
-                <svg class="card-icon" viewBox="0 0 24 24" fill="var(--text-muted)">
-                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-                </svg>
-                <span class="card-title">Add Link</span>
-            `;
-            grid.appendChild(addBtn);
-        }
-
-        function deleteBookmark(id) {
-            bookmarks = bookmarks.filter(bm => bm.id !== id);
-            saveBookmarks();
-            renderBookmarks();
-        }
-
-        // --- 5. Modal Logic ---
-        const modal = document.getElementById('modal');
-        const form = document.getElementById('add-bookmark-form');
-        const searchInput = document.getElementById('search-input');
-
-        function openModal() {
-            modal.classList.add('active');
-            document.getElementById('bm-title').focus();
-        }
-
-        function closeModal() {
-            modal.classList.remove('active');
-            form.reset();
-            searchInput.focus();
-        }
-
-        // Close modal on outside click or Escape key
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) closeModal();
-        });
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeModal();
-        });
-
-        // Form Submission
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
+        // --- Multi-Provider Cloud Sync API Wrapper ---
+        const CloudStore = {
+            binId: (() => {
+                const match = window.location.hash.match(/ws=([^&]+)/);
+                return match ? match[1] : null;
+            })(),
+            isSyncing: false,
+            syncPending: false,
             
-            const title = document.getElementById('bm-title').value;
-            let url = document.getElementById('bm-url').value;
+            async load() {
+                if (!this.binId) return null;
+                try {
+                    let res;
+                    if (this.binId.startsWith('jb_')) {
+                        res = await fetch(`https://jsonblob.com/api/jsonBlob/${this.binId.substring(3)}`);
+                    } else if (this.binId.startsWith('np_')) {
+                        res = await fetch(`https://api.npoint.io/${this.binId.substring(3)}`);
+                    } else {
+                        // Legacy support
+                        res = await fetch(`https://api.npoint.io/${this.binId}`);
+                    }
+                    if (res.ok) return await res.json();
+                } catch(e) { console.warn('Cloud read error', e); }
+                return null;
+            },
 
-            // Ensure URL has protocol
-            if (!/^https?:\/\//i.test(url)) {
-                url = 'https://' + url;
+            async save(data) {
+                // Prevent overlapping saves
+                if (this.isSyncing) {
+                    this.syncPending = true;
+                    return;
+                }
+                
+                this.isSyncing = true;
+                this.syncPending = false;
+                
+                DOM.saveStatus.innerHTML = '<i data-lucide="loader" class="w-3 h-3 animate-spin text-amber-500"></i> Syncing';
+                lucide.createIcons();
+                
+                try {
+                    if (!this.binId) {
+                        // Creation: Try Provider 1 (JSONBlob - Most Reliable)
+                        try {
+                            const res = await fetch('https://jsonblob.com/api/jsonBlob', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                                body: JSON.stringify(data)
+                            });
+                            if (!res.ok) throw new Error("JSONBlob Error");
+                            const locationUrl = res.headers.get('Location') || res.headers.get('location');
+                            if (!locationUrl) throw new Error("No Location Header");
+                            
+                            this.binId = 'jb_' + locationUrl.split('/').pop();
+                        } catch (err1) {
+                            console.warn("JSONBlob creation failed, falling back to NPoint...", err1);
+                            
+                            // Creation: Try Provider 2 (NPoint - Fallback)
+                            const res2 = await fetch('https://api.npoint.io/', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(data)
+                            });
+                            if (!res2.ok) throw new Error("NPoint Error");
+                            const result2 = await res2.json();
+                            if(!result2.id) throw new Error("Invalid NPoint Response");
+                            
+                            this.binId = 'np_' + result2.id;
+                        }
+
+                        // Successfully created on one of the providers
+                        window.location.hash = 'ws=' + this.binId; 
+                        DOM.workspaceDisplay.innerText = 'WS-' + this.binId.substring(3, 8);
+                        DOM.workspaceDisplay.className = 'text-xs font-mono font-semibold text-emerald-500';
+                        
+                    } else {
+                        // Update existing Cloud Document Box
+                        if (this.binId.startsWith('jb_')) {
+                            await fetch(`https://jsonblob.com/api/jsonBlob/${this.binId.substring(3)}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                                body: JSON.stringify(data)
+                            });
+                        } else {
+                            const realId = this.binId.startsWith('np_') ? this.binId.substring(3) : this.binId;
+                            await fetch(`https://api.npoint.io/${realId}`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(data)
+                            });
+                        }
+                    }
+                    DOM.saveStatus.innerHTML = '<i data-lucide="cloud-check" class="w-3 h-3 text-emerald-500"></i> Synced';
+                } catch(e) {
+                    console.error('All Cloud providers failed:', e);
+                    DOM.saveStatus.innerHTML = '<i data-lucide="cloud-off" class="w-3 h-3 text-rose-500"></i> Local Only';
+                    DOM.workspaceDisplay.innerText = 'Offline (Retry)';
+                    DOM.workspaceDisplay.className = 'text-xs font-mono font-semibold text-rose-500';
+                }
+                
+                lucide.createIcons();
+                this.isSyncing = false;
+                
+                // If a save was requested while we were syncing, run it now to catch up
+                if (this.syncPending) {
+                    this.save(files);
+                }
+            }
+        };
+
+        function copyWorkspaceLink() {
+            if(CloudStore.binId) {
+                navigator.clipboard.writeText(window.location.href);
+                const original = DOM.workspaceDisplay.innerText;
+                DOM.workspaceDisplay.innerText = 'Copied Link!';
+                setTimeout(() => DOM.workspaceDisplay.innerText = original, 2000);
+            } else {
+                // Triggers a manual retry if it was stuck offline
+                DOM.workspaceDisplay.innerText = 'Retrying...';
+                DOM.workspaceDisplay.className = 'text-xs font-mono font-semibold text-amber-500';
+                CloudStore.save(files);
+            }
+        }
+
+        // --- Initialize Vditor (WYSIWYG Engine) ---
+        function initEditor() {
+            const currentTheme = localStorage.getItem('omnimark_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', currentTheme);
+
+            vditor = new Vditor('vditor', {
+                height: '100%',
+                mode: 'wysiwyg', 
+                icon: 'material',
+                theme: currentTheme === 'light' ? 'classic' : 'dark',
+                outline: { enable: true, position: 'right' },
+                cache: { enable: false },
+                toolbar:[
+                    'emoji', 'headings', 'bold', 'italic', 'strike', 'link', '|',
+                    'list', 'ordered-list', 'check', 'outdent', 'indent', '|',
+                    'quote', 'line', 'code', 'inline-code', '|',
+                    'table', 'upload', '|',
+                    'undo', 'redo', '|',
+                    'edit-mode',
+                    { name: 'more', toolbar:['export', 'fullscreen', 'info', 'help'] }
+                ],
+                preview: { theme: { current: currentTheme === 'light' ? 'light' : 'dark' }, math: { engine: 'KaTeX' } },
+                after: () => {
+                    lucide.createIcons();
+                    bootFileSystem(); // Replaces old init
+                },
+                input: (val) => {
+                    lastTyped = Date.now();
+                    triggerAutoSave();
+                    updateInsights();
+                }
+            });
+        }
+
+        // --- Robust Theme Manager ---
+        function setTheme(themeName) {
+            document.documentElement.setAttribute('data-theme', themeName);
+            localStorage.setItem('omnimark_theme', themeName);
+            
+            if(vditor) {
+                const isLight = themeName === 'light';
+                vditor.setTheme(
+                    isLight ? 'classic' : 'dark', 
+                    isLight ? 'light' : 'dark', 
+                    isLight ? 'github' : 'monokai'
+                );
+            }
+        }
+
+        // --- Cryptography (AES-256) ---
+        function encrypt(text, password) { return CryptoJS.AES.encrypt(text, password).toString(); }
+        function decrypt(ciphertext, password) {
+            try {
+                const bytes = CryptoJS.AES.decrypt(ciphertext, password);
+                return bytes.toString(CryptoJS.enc.Utf8) || null;
+            } catch(e) { return null; }
+        }
+
+        // --- Global Cloud Boot Logic ---
+        async function bootFileSystem() {
+            if (CloudStore.binId) {
+                DOM.saveStatus.innerHTML = '<i data-lucide="loader" class="w-3 h-3 animate-spin text-amber-500"></i> Fetching...';
+                lucide.createIcons();
+                const cloudData = await CloudStore.load();
+                
+                if (cloudData && Object.keys(cloudData).length > 0) {
+                    files = cloudData;
+                    localStorage.setItem('omni_files_v3', JSON.stringify(files));
+                    DOM.workspaceDisplay.innerText = 'WS-' + CloudStore.binId.substring(3,8);
+                    DOM.workspaceDisplay.className = 'text-xs font-mono font-semibold text-emerald-500';
+                } else {
+                    files = JSON.parse(localStorage.getItem('omni_files_v3')) || {};
+                }
+            } else {
+                files = JSON.parse(localStorage.getItem('omni_files_v3')) || {};
             }
 
-            const newBookmark = {
-                id: Date.now().toString(),
-                title,
-                url
-            };
+            const keys = Object.keys(files);
+            if(keys.length === 0) {
+                createNewFile(true);
+            } else {
+                if(!currentFileId || !files[currentFileId]) loadFile(keys[0]);
+                else renderFileList();
+                
+                // If it wasn't on the cloud, sync it now to generate a URL Hash
+                if (!CloudStore.binId) await CloudStore.save(files);
+            }
+            
+            // Start Continuous Polling to receive edits from other browsers automatically
+            setInterval(pollCloud, 8000); 
+        }
 
-            bookmarks.push(newBookmark);
-            saveBookmarks();
-            renderBookmarks();
-            closeModal();
+        async function pollCloud() {
+            if (!CloudStore.binId || CloudStore.isSyncing) return;
+            const remoteData = await CloudStore.load();
+            
+            // If the fetched cloud version differs from our local snapshot
+            if (remoteData && JSON.stringify(remoteData) !== JSON.stringify(files)) {
+                files = remoteData;
+                localStorage.setItem('omni_files_v3', JSON.stringify(files));
+                renderFileList();
+                
+                // Only overwrite the editor content if we haven't typed anything recently (prevents cursor jumping)
+                if (Date.now() - lastTyped > 3000 && currentFileId) {
+                    const file = files[currentFileId];
+                    if (file) {
+                        DOM.docTitle.value = file.title;
+                        if (!file.locked) vditor.setValue(file.content);
+                        else if (currentSessionPassword) {
+                            const decrypted = decrypt(file.content, currentSessionPassword);
+                            if(decrypted !== null) vditor.setValue(decrypted);
+                        } else {
+                            vditor.setValue("🔒 Document was locked remotely. Re-enter password.");
+                            DOM.lockIndicator.classList.remove('hidden');
+                        }
+                    } else {
+                        bootFileSystem(); // File was deleted remotely
+                    }
+                }
+            }
+        }
+
+        function createNewFile(isWelcome = false) {
+            const id = 'doc_' + Date.now();
+            const welcomeText = isWelcome ? `# Welcome to OmniMark Cloud ☁️\n\nYour workspace is automatically synced online to a private link.\n\n### 🌍 Collaborate Anywhere\nCopy the URL from your browser (or click the **Cloud ID** on the top left) and paste it into any browser or device. All changes sync in real-time.\n\n### 🛡️ Real Encryption\nBecause the cloud is accessible by URL, click the **Shield Icon** on the top right to lock sensitive files with True AES-256 encryption.\n\n### ⌨️ Command Palette\nPress \`Ctrl+K\` to change themes, export documents, or use voice dictation.` : '';
+            
+            files[id] = { title: isWelcome ? 'Welcome to Cloud Workspace' : 'Untitled Document', content: welcomeText, locked: false, timestamp: Date.now() };
+            currentFileId = id;
+            currentSessionPassword = null;
+            
+            DOM.docTitle.value = files[id].title;
+            DOM.lockIndicator.classList.add('hidden');
+            if(vditor) vditor.setValue(welcomeText);
+            
+            saveToStorage();
+            renderFileList();
+            updateInsights();
+        }
+
+        function loadFile(id) {
+            if(!files[id]) return;
+            const file = files[id];
+            
+            if(file.locked) {
+                pwdCallback = (pwd) => {
+                    const decrypted = decrypt(file.content, pwd);
+                    if(decrypted === null) {
+                        DOM.pwdError.classList.remove('hidden');
+                    } else {
+                        currentSessionPassword = pwd;
+                        executeLoad(id, file, decrypted);
+                        closePwdModal();
+                    }
+                };
+                DOM.pwdError.classList.add('hidden');
+                DOM.pwdInput.value = '';
+                DOM.pwdModal.classList.add('active');
+                DOM.pwdInput.focus();
+            } else {
+                currentSessionPassword = null;
+                executeLoad(id, file, file.content);
+            }
+        }
+
+        function executeLoad(id, file, plaintext) {
+            currentFileId = id;
+            DOM.docTitle.value = file.title;
+            DOM.lockIndicator.classList.toggle('hidden', !file.locked);
+            vditor.setValue(plaintext || '');
+            renderFileList();
+            updateInsights();
+        }
+
+        function deleteFile(id, e) {
+            e.stopPropagation();
+            if(confirm('Delete this document permanently from the Cloud?')) {
+                delete files[id];
+                saveToStorage();
+                if(currentFileId === id) bootFileSystem();
+                else renderFileList();
+            }
+        }
+
+        // Auto Save Architecture
+        let saveTimeout;
+        function triggerAutoSave() {
+            DOM.saveStatus.innerHTML = '<i data-lucide="loader" class="w-3 h-3 animate-spin text-amber-500"></i> Saving';
+            lucide.createIcons();
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(commitSave, 1500); // 1.5s debounce to respect API rate limits
+        }
+
+        function commitSave() {
+            if(!currentFileId || !files[currentFileId]) return;
+            files[currentFileId].title = DOM.docTitle.value;
+            files[currentFileId].timestamp = Date.now();
+            
+            const rawContent = vditor.getValue();
+            if(files[currentFileId].locked && currentSessionPassword) {
+                files[currentFileId].content = encrypt(rawContent, currentSessionPassword);
+            } else {
+                files[currentFileId].content = rawContent;
+            }
+            
+            saveToStorage();
+            renderFileList();
+        }
+
+        function saveToStorage() { 
+            localStorage.setItem('omni_files_v3', JSON.stringify(files)); // Local Backup
+            CloudStore.save(files); // Sync Global State
+        }
+
+        DOM.docTitle.addEventListener('input', () => { lastTyped = Date.now(); triggerAutoSave(); });
+
+        // Render Sidebar
+        function renderFileList() {
+            DOM.fileList.innerHTML = '';
+            const sorted = Object.entries(files).sort((a,b) => b[1].timestamp - a[1].timestamp);
+            
+            sorted.forEach(([id, data]) => {
+                const isActive = id === currentFileId;
+                const dateStr = new Date(data.timestamp).toLocaleDateString();
+                const lockIcon = data.locked ? `<i data-lucide="lock" class="w-3 h-3 text-rose-500"></i>` : '';
+                
+                const div = document.createElement('div');
+                div.className = `p-3 rounded-lg cursor-pointer flex justify-between items-center group transition ${isActive ? 'theme-accent shadow-md' : 'theme-hover border border-transparent theme-border'}`;
+                div.onclick = () => loadFile(id);
+                div.innerHTML = `
+                    <div class="overflow-hidden flex-1">
+                        <div class="font-semibold text-sm truncate flex items-center gap-2">
+                            ${lockIcon} ${data.title}
+                        </div>
+                        <div class="text-[10px] opacity-70 mt-1">${dateStr}</div>
+                    </div>
+                    <button class="opacity-0 group-hover:opacity-100 text-rose-300 hover:text-white hover:bg-rose-500 p-1.5 rounded transition ml-2" onclick="deleteFile('${id}', event)">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                `;
+                DOM.fileList.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        // --- File Locking / Encryption Logic ---
+        let pwdCallback = null;
+        function lockCurrentFile() {
+            if(!currentFileId) return;
+            const file = files[currentFileId];
+            
+            if(file.locked) {
+                if(confirm("This file is encrypted. Do you want to remove the password and decrypt it permanently?")) {
+                    file.locked = false;
+                    currentSessionPassword = null;
+                    DOM.lockIndicator.classList.add('hidden');
+                    triggerAutoSave();
+                    alert("File unlocked.");
+                }
+            } else {
+                DOM.pwdError.classList.add('hidden');
+                DOM.pwdInput.value = '';
+                DOM.pwdModal.classList.add('active');
+                DOM.pwdInput.focus();
+                
+                pwdCallback = (pwd) => {
+                    file.locked = true;
+                    currentSessionPassword = pwd;
+                    DOM.lockIndicator.classList.remove('hidden');
+                    triggerAutoSave();
+                    closePwdModal();
+                    alert("File Encrypted successfully.");
+                };
+            }
+        }
+        function closePwdModal() { DOM.pwdModal.classList.remove('active'); pwdCallback = null; }
+        function submitPassword() { if(pwdCallback && DOM.pwdInput.value) pwdCallback(DOM.pwdInput.value); }
+        DOM.pwdInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') submitPassword(); });
+
+        // --- Insights ---
+        function updateInsights() {
+            const text = vditor.getValue();
+            const cleanText = text.replace(/[#*`_\[\]()]/g, ''); 
+            const words = cleanText.match(/\b[-?(\w+)?]+\b/gi) ||[];
+            DOM.statWords.innerText = words.length;
+            DOM.statChars.innerText = cleanText.length;
+            DOM.statTime.innerText = Math.max(1, Math.ceil(words.length / 200)) + ' min';
+        }
+
+        // --- Voice Dictation (Speech to Text) ---
+        function toggleDictation() {
+            if(isDictating) {
+                recognition.stop();
+                return;
+            }
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if(!SpeechRecognition) return alert("Speech Recognition not supported in this browser. Try Chrome/Edge.");
+            
+            if(!recognition) {
+                recognition = new SpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                
+                recognition.onstart = () => {
+                    isDictating = true;
+                    DOM.dictateOverlay.classList.remove('hidden');
+                };
+                recognition.onresult = (event) => {
+                    let finalTranscript = '';
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript + ' ';
+                    }
+                    if(finalTranscript) {
+                        vditor.insertValue(finalTranscript);
+                    }
+                };
+                recognition.onerror = (e) => console.error(e);
+                recognition.onend = () => {
+                    isDictating = false;
+                    DOM.dictateOverlay.classList.add('hidden');
+                };
+            }
+            recognition.start();
+        }
+
+        // --- Text to Speech ---
+        function readAloud() {
+            if('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const text = vditor.getValue().replace(/[#*`_]/g, ''); 
+                const msg = new SpeechSynthesisUtterance(text);
+                window.speechSynthesis.speak(msg);
+            } else { alert('TTS not supported.'); }
+        }
+
+        // --- Layout Toggles ---
+        function toggleSidebar() {
+            const sb = document.getElementById('sidebar');
+            sb.style.display = sb.style.display === 'none' ? 'flex' : 'none';
+        }
+        function toggleFocusMode() { document.body.classList.toggle('focus-mode'); }
+
+        // --- Command Palette (Omnibar) ---
+        const commands =[
+            { id: 't-dark', icon: 'moon', label: 'Theme: Deep Dark', action: () => setTheme('dark') },
+            { id: 't-light', icon: 'sun', label: 'Theme: Clean Light', action: () => setTheme('light') },
+            { id: 't-matrix', icon: 'terminal', label: 'Theme: Hacker Matrix', action: () => setTheme('matrix') },
+            { id: 'f-new', icon: 'plus', label: 'File: Create New Document', action: createNewFile },
+            { id: 'f-lock', icon: 'shield', label: 'Security: Encrypt / Lock Document', action: lockCurrentFile },
+            { id: 'f-share', icon: 'share-2', label: 'Cloud: Copy Shareable Workspace Link', action: copyWorkspaceLink },
+            { id: 'v-focus', icon: 'focus', label: 'View: Toggle Focus Mode', action: toggleFocusMode },
+            { id: 'u-dictate', icon: 'mic', label: 'Utility: Start Voice Dictation', action: toggleDictation },
+            { id: 'u-read', icon: 'volume-2', label: 'Utility: Read Document Aloud', action: readAloud },
+            { id: 'e-html', icon: 'file-code', label: 'Export: Download HTML', action: () => vditor.exportHTML() },
+            { id: 'e-md', icon: 'file-down', label: 'Export: Download Markdown', action: () => {
+                const blob = new Blob([vditor.getValue()], {type: "text/markdown"});
+                const a = document.createElement("a"); a.href = URL.createObjectURL(blob); 
+                a.download = DOM.docTitle.value + '.md'; a.click();
+            }}
+        ];
+
+        let cmdIndex = 0;
+        function openCmd() {
+            DOM.cmdPalette.classList.add('active');
+            DOM.cmdInput.value = '';
+            DOM.cmdInput.focus();
+            renderCmdList('');
+        }
+        function closeCmd() { DOM.cmdPalette.classList.remove('active'); }
+
+        function renderCmdList(filter) {
+            DOM.cmdList.innerHTML = '';
+            const filtered = commands.filter(c => c.label.toLowerCase().includes(filter.toLowerCase()));
+            cmdIndex = 0;
+            
+            if(filtered.length === 0) {
+                DOM.cmdList.innerHTML = '<div class="p-4 theme-text-muted text-center">No commands found</div>';
+                return;
+            }
+
+            filtered.forEach((cmd, idx) => {
+                const div = document.createElement('div');
+                div.className = `cmd-item p-3 flex items-center gap-3 cursor-pointer theme-text-muted transition ${idx === cmdIndex ? 'selected' : 'theme-hover'}`;
+                div.innerHTML = `<i data-lucide="${cmd.icon}" class="w-4 h-4"></i> <span>${cmd.label}</span>`;
+                div.onclick = () => { cmd.action(); closeCmd(); };
+                DOM.cmdList.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        DOM.cmdInput.addEventListener('input', (e) => renderCmdList(e.target.value));
+        DOM.cmdInput.addEventListener('keydown', (e) => {
+            const items = DOM.cmdList.querySelectorAll('.cmd-item');
+            if (e.key === 'ArrowDown') { e.preventDefault(); cmdIndex = (cmdIndex + 1) % items.length; updateCmdSelection(items); }
+            if (e.key === 'ArrowUp') { e.preventDefault(); cmdIndex = (cmdIndex - 1 + items.length) % items.length; updateCmdSelection(items); }
+            if (e.key === 'Enter' && items[cmdIndex]) { e.preventDefault(); items[cmdIndex].click(); }
+            if (e.key === 'Escape') closeCmd();
         });
 
-        // Initial Render
-        renderBookmarks();
+        function updateCmdSelection(items) {
+            items.forEach((item, idx) => {
+                if(idx === cmdIndex) { item.classList.add('selected'); item.classList.remove('theme-hover'); item.scrollIntoView({block: 'nearest'}); } 
+                else { item.classList.remove('selected'); item.classList.add('theme-hover'); }
+            });
+        }
 
-        // Gain focus on load
-        window.onload = () => searchInput.focus();
+        // Global Keybinds & Click Outsides
+        window.addEventListener('keydown', (e) => {
+            if((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); openCmd(); }
+            if(e.key === 'F11') { e.preventDefault(); toggleFocusMode(); }
+        });
+        DOM.cmdPalette.addEventListener('click', (e) => { if(e.target === DOM.cmdPalette) closeCmd(); });
+
+        // Boot Application
+        initEditor();
     </script>
 </body>
 </html>
