@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniMark Ultimate | WYSIWYG Studio</title>
+    <title>OmniMark Ultimate | Cloud Studio</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -90,14 +90,19 @@
             <div class="h-6 w-px theme-border border-l mx-2"></div>
             
             <div class="flex items-center gap-2">
+                <div onclick="copyWorkspaceLink()" class="flex items-center gap-1.5 px-2 py-1 theme-hover rounded cursor-pointer border theme-border transition" title="Copy Cloud Workspace Link">
+                    <i data-lucide="cloud" class="w-4 h-4 text-emerald-500"></i>
+                    <span id="workspace-id-display" class="text-xs font-mono font-semibold text-emerald-500">Connecting...</span>
+                </div>
+                <div class="h-5 w-px theme-border border-l mx-1"></div>
                 <i data-lucide="file-text" class="w-4 h-4 theme-text-muted"></i>
-                <input type="text" id="doc-title" value="Untitled Document" class="bg-transparent border-none outline-none font-semibold px-2 py-1 rounded theme-hover transition w-64" placeholder="Document Title...">
+                <input type="text" id="doc-title" value="Untitled Document" class="bg-transparent border-none outline-none font-semibold px-2 py-1 rounded theme-hover transition w-56" placeholder="Document Title...">
                 <i id="lock-indicator" data-lucide="lock" class="w-4 h-4 text-rose-500 hidden" title="Encrypted File"></i>
             </div>
         </div>
         
         <div class="flex items-center gap-1">
-            <span id="save-status" class="text-xs theme-text-muted mr-4 flex items-center gap-1">
+            <span id="save-status" class="text-xs theme-text-muted mr-4 flex items-center gap-1 w-20 justify-end">
                 <i data-lucide="check" class="w-3 h-3 text-emerald-500"></i> Saved
             </span>
             <button onclick="toggleDictation()" id="btn-dictate" class="p-2 theme-hover rounded-lg transition text-rose-400" title="Voice Dictation">
@@ -200,11 +205,12 @@
     <script>
         // --- Core State ---
         let vditor = null;
-        let files = JSON.parse(localStorage.getItem('omni_files_v3')) || {};
+        let files = {};
         let currentFileId = null;
         let currentSessionPassword = null;
         let isDictating = false;
         let recognition = null;
+        let lastTyped = 0; // Tracks when user last typed for sync logic
         
         // --- DOM Elements ---
         const DOM = {
@@ -221,8 +227,72 @@
             statWords: document.getElementById('stat-words'),
             statChars: document.getElementById('stat-chars'),
             statTime: document.getElementById('stat-time'),
-            dictateOverlay: document.getElementById('dictation-overlay')
+            dictateOverlay: document.getElementById('dictation-overlay'),
+            workspaceDisplay: document.getElementById('workspace-id-display')
         };
+
+        // --- Cloud Sync API Wrapper ---
+        const CloudStore = {
+            binId: (() => {
+                const match = window.location.hash.match(/ws=([^&]+)/);
+                return match ? match[1] : null;
+            })(),
+            isSyncing: false,
+            async load() {
+                if (!this.binId) return null;
+                try {
+                    const res = await fetch(`https://api.npoint.io/${this.binId}`);
+                    if (res.ok) return await res.json();
+                } catch(e) { console.warn('Cloud read error', e); }
+                return null;
+            },
+            async save(data) {
+                this.isSyncing = true;
+                DOM.saveStatus.innerHTML = '<i data-lucide="loader" class="w-3 h-3 animate-spin text-amber-500"></i> Syncing';
+                lucide.createIcons();
+                
+                try {
+                    if (!this.binId) {
+                        // Generate a brand new Cloud Document Box
+                        const res = await fetch('https://api.npoint.io/', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(data)
+                        });
+                        const result = await res.json();
+                        if(result.id) {
+                            this.binId = result.id;
+                            window.location.hash = 'ws=' + this.binId; // Safe across all browsers & local files
+                            DOM.workspaceDisplay.innerText = 'WS-' + this.binId.substring(0,6);
+                        }
+                    } else {
+                        // Update existing Cloud Document Box
+                        await fetch(`https://api.npoint.io/${this.binId}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(data)
+                        });
+                    }
+                    DOM.saveStatus.innerHTML = '<i data-lucide="cloud-check" class="w-3 h-3 text-emerald-500"></i> Synced';
+                } catch(e) {
+                    console.warn('Cloud save error', e);
+                    DOM.saveStatus.innerHTML = '<i data-lucide="cloud-off" class="w-3 h-3 text-rose-500"></i> Local Only';
+                }
+                lucide.createIcons();
+                this.isSyncing = false;
+            }
+        };
+
+        function copyWorkspaceLink() {
+            if(CloudStore.binId) {
+                navigator.clipboard.writeText(window.location.href);
+                const original = DOM.workspaceDisplay.innerText;
+                DOM.workspaceDisplay.innerText = 'Copied Link!';
+                setTimeout(() => DOM.workspaceDisplay.innerText = original, 2000);
+            } else {
+                alert("Workspace not synced to cloud yet. Try creating a document first.");
+            }
+        }
 
         // --- Initialize Vditor (WYSIWYG Engine) ---
         function initEditor() {
@@ -231,32 +301,27 @@
 
             vditor = new Vditor('vditor', {
                 height: '100%',
-                mode: 'wysiwyg', // Pure WYSIWYG mode natively
+                mode: 'wysiwyg', 
                 icon: 'material',
                 theme: currentTheme === 'light' ? 'classic' : 'dark',
                 outline: { enable: true, position: 'right' },
-                cache: { enable: false }, // We handle saving to support encryption
+                cache: { enable: false },
                 toolbar:[
                     'emoji', 'headings', 'bold', 'italic', 'strike', 'link', '|',
                     'list', 'ordered-list', 'check', 'outdent', 'indent', '|',
                     'quote', 'line', 'code', 'inline-code', '|',
                     'table', 'upload', '|',
                     'undo', 'redo', '|',
-                    'edit-mode', // Let user toggle between WYSIWYG, Instant Rendering, and Split View
-                    {
-                        name: 'more',
-                        toolbar: ['export', 'fullscreen', 'info', 'help'],
-                    }
+                    'edit-mode',
+                    { name: 'more', toolbar:['export', 'fullscreen', 'info', 'help'] }
                 ],
-                preview: {
-                    theme: { current: currentTheme === 'light' ? 'light' : 'dark' },
-                    math: { engine: 'KaTeX' } // Native Math Support
-                },
+                preview: { theme: { current: currentTheme === 'light' ? 'light' : 'dark' }, math: { engine: 'KaTeX' } },
                 after: () => {
                     lucide.createIcons();
-                    bootFileSystem();
+                    bootFileSystem(); // Replaces old init
                 },
                 input: (val) => {
+                    lastTyped = Date.now();
                     triggerAutoSave();
                     updateInsights();
                 }
@@ -270,7 +335,6 @@
             
             if(vditor) {
                 const isLight = themeName === 'light';
-                // Sync Vditor's UI, Content, and Code Block themes dynamically
                 vditor.setTheme(
                     isLight ? 'classic' : 'dark', 
                     isLight ? 'light' : 'dark', 
@@ -280,35 +344,88 @@
         }
 
         // --- Cryptography (AES-256) ---
-        function encrypt(text, password) {
-            return CryptoJS.AES.encrypt(text, password).toString();
-        }
+        function encrypt(text, password) { return CryptoJS.AES.encrypt(text, password).toString(); }
         function decrypt(ciphertext, password) {
             try {
                 const bytes = CryptoJS.AES.decrypt(ciphertext, password);
-                const originalText = bytes.toString(CryptoJS.enc.Utf8);
-                return originalText || null;
+                return bytes.toString(CryptoJS.enc.Utf8) || null;
             } catch(e) { return null; }
         }
 
-        // --- File System Logic ---
-        function bootFileSystem() {
+        // --- Global Cloud Boot Logic ---
+        async function bootFileSystem() {
+            if (CloudStore.binId) {
+                DOM.saveStatus.innerHTML = '<i data-lucide="loader" class="w-3 h-3 animate-spin text-amber-500"></i> Fetching...';
+                lucide.createIcons();
+                const cloudData = await CloudStore.load();
+                
+                if (cloudData && Object.keys(cloudData).length > 0) {
+                    files = cloudData;
+                    localStorage.setItem('omni_files_v3', JSON.stringify(files));
+                    DOM.workspaceDisplay.innerText = 'WS-' + CloudStore.binId.substring(0,6);
+                } else {
+                    files = JSON.parse(localStorage.getItem('omni_files_v3')) || {};
+                }
+            } else {
+                files = JSON.parse(localStorage.getItem('omni_files_v3')) || {};
+            }
+
             const keys = Object.keys(files);
-            if(keys.length === 0) createNewFile(true);
-            else loadFile(keys[0]);
+            if(keys.length === 0) {
+                createNewFile(true);
+            } else {
+                if(!currentFileId || !files[currentFileId]) loadFile(keys[0]);
+                else renderFileList();
+                
+                // If it wasn't on the cloud, sync it now to generate a URL Hash
+                if (!CloudStore.binId) await CloudStore.save(files);
+            }
+            
+            // Start Continuous Polling to receive edits from other browsers automatically
+            setInterval(pollCloud, 8000); 
+        }
+
+        async function pollCloud() {
+            if (!CloudStore.binId || CloudStore.isSyncing) return;
+            const remoteData = await CloudStore.load();
+            
+            // If the fetched cloud version differs from our local snapshot
+            if (remoteData && JSON.stringify(remoteData) !== JSON.stringify(files)) {
+                files = remoteData;
+                localStorage.setItem('omni_files_v3', JSON.stringify(files));
+                renderFileList();
+                
+                // Only overwrite the editor content if we haven't typed anything recently (prevents cursor jumping)
+                if (Date.now() - lastTyped > 3000 && currentFileId) {
+                    const file = files[currentFileId];
+                    if (file) {
+                        DOM.docTitle.value = file.title;
+                        if (!file.locked) vditor.setValue(file.content);
+                        else if (currentSessionPassword) {
+                            const decrypted = decrypt(file.content, currentSessionPassword);
+                            if(decrypted !== null) vditor.setValue(decrypted);
+                        } else {
+                            vditor.setValue("🔒 Document was locked remotely. Re-enter password.");
+                            DOM.lockIndicator.classList.remove('hidden');
+                        }
+                    } else {
+                        bootFileSystem(); // File was deleted remotely
+                    }
+                }
+            }
         }
 
         function createNewFile(isWelcome = false) {
             const id = 'doc_' + Date.now();
-            const welcomeText = isWelcome ? `# Welcome to OmniMark Ultimate 🚀\n\nYou are in **WYSIWYG** mode. Type naturally!\n\n- Render **Math**: $E=mc^2$\n- Add tables, charts, diagrams natively.\n- Try the \`Ctrl+K\` Command Palette.` : '';
+            const welcomeText = isWelcome ? `# Welcome to OmniMark Cloud ☁️\n\nYour workspace is automatically synced online to a private link.\n\n### 🌍 Collaborate Anywhere\nCopy the URL from your browser (or click the **Cloud ID** on the top left) and paste it into any browser or device. All changes sync in real-time.\n\n### 🛡️ Real Encryption\nBecause the cloud is accessible by URL, click the **Shield Icon** on the top right to lock sensitive files with True AES-256 encryption.\n\n### ⌨️ Command Palette\nPress \`Ctrl+K\` to change themes, export documents, or use voice dictation.` : '';
             
-            files[id] = { title: 'Untitled Document', content: welcomeText, locked: false, timestamp: Date.now() };
+            files[id] = { title: isWelcome ? 'Welcome to Cloud Workspace ☁️' : 'Untitled Document', content: welcomeText, locked: false, timestamp: Date.now() };
             currentFileId = id;
             currentSessionPassword = null;
             
             DOM.docTitle.value = files[id].title;
             DOM.lockIndicator.classList.add('hidden');
-            vditor.setValue(welcomeText);
+            if(vditor) vditor.setValue(welcomeText);
             
             saveToStorage();
             renderFileList();
@@ -320,7 +437,6 @@
             const file = files[id];
             
             if(file.locked) {
-                // Prompt for password
                 pwdCallback = (pwd) => {
                     const decrypted = decrypt(file.content, pwd);
                     if(decrypted === null) {
@@ -352,10 +468,11 @@
 
         function deleteFile(id, e) {
             e.stopPropagation();
-            if(confirm('Delete this document permanently?')) {
+            if(confirm('Delete this document permanently from the Cloud?')) {
                 delete files[id];
+                saveToStorage();
                 if(currentFileId === id) bootFileSystem();
-                else { saveToStorage(); renderFileList(); }
+                else renderFileList();
             }
         }
 
@@ -365,11 +482,11 @@
             DOM.saveStatus.innerHTML = '<i data-lucide="loader" class="w-3 h-3 animate-spin text-amber-500"></i> Saving';
             lucide.createIcons();
             clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(commitSave, 500);
+            saveTimeout = setTimeout(commitSave, 1500); // 1.5s debounce to respect API rate limits
         }
 
         function commitSave() {
-            if(!currentFileId) return;
+            if(!currentFileId || !files[currentFileId]) return;
             files[currentFileId].title = DOM.docTitle.value;
             files[currentFileId].timestamp = Date.now();
             
@@ -381,13 +498,15 @@
             }
             
             saveToStorage();
-            DOM.saveStatus.innerHTML = '<i data-lucide="check" class="w-3 h-3 text-emerald-500"></i> Saved';
-            lucide.createIcons();
             renderFileList();
         }
 
-        function saveToStorage() { localStorage.setItem('omni_files_v3', JSON.stringify(files)); }
-        DOM.docTitle.addEventListener('input', triggerAutoSave);
+        function saveToStorage() { 
+            localStorage.setItem('omni_files_v3', JSON.stringify(files)); // Local Backup
+            CloudStore.save(files); // Sync Global State
+        }
+
+        DOM.docTitle.addEventListener('input', () => { lastTyped = Date.now(); triggerAutoSave(); });
 
         // Render Sidebar
         function renderFileList() {
@@ -455,10 +574,8 @@
         // --- Insights ---
         function updateInsights() {
             const text = vditor.getValue();
-            // Basic approximation filtering markdown artifacts
             const cleanText = text.replace(/[#*`_\[\]()]/g, ''); 
             const words = cleanText.match(/\b[-?(\w+)?]+\b/gi) ||[];
-            
             DOM.statWords.innerText = words.length;
             DOM.statChars.innerText = cleanText.length;
             DOM.statTime.innerText = Math.max(1, Math.ceil(words.length / 200)) + ' min';
@@ -504,8 +621,8 @@
         // --- Text to Speech ---
         function readAloud() {
             if('speechSynthesis' in window) {
-                window.speechSynthesis.cancel(); // Stop current
-                const text = vditor.getValue().replace(/[#*`_]/g, ''); // Strip basic MD
+                window.speechSynthesis.cancel();
+                const text = vditor.getValue().replace(/[#*`_]/g, ''); 
                 const msg = new SpeechSynthesisUtterance(text);
                 window.speechSynthesis.speak(msg);
             } else { alert('TTS not supported.'); }
@@ -525,6 +642,7 @@
             { id: 't-matrix', icon: 'terminal', label: 'Theme: Hacker Matrix', action: () => setTheme('matrix') },
             { id: 'f-new', icon: 'plus', label: 'File: Create New Document', action: createNewFile },
             { id: 'f-lock', icon: 'shield', label: 'Security: Encrypt / Lock Document', action: lockCurrentFile },
+            { id: 'f-share', icon: 'share-2', label: 'Cloud: Copy Shareable Workspace Link', action: copyWorkspaceLink },
             { id: 'v-focus', icon: 'focus', label: 'View: Toggle Focus Mode', action: toggleFocusMode },
             { id: 'u-dictate', icon: 'mic', label: 'Utility: Start Voice Dictation', action: toggleDictation },
             { id: 'u-read', icon: 'volume-2', label: 'Utility: Read Document Aloud', action: readAloud },
@@ -588,7 +706,7 @@
         });
         DOM.cmdPalette.addEventListener('click', (e) => { if(e.target === DOM.cmdPalette) closeCmd(); });
 
-        // Boot
+        // Boot Application
         initEditor();
     </script>
 </body>
