@@ -42,7 +42,11 @@
 
         h1 { font-size: 1.8rem; font-weight: 600; }
 
-        .header-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .header-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
 
         .btn {
             background: var(--surface-color);
@@ -59,14 +63,13 @@
             gap: 0.5rem;
         }
 
-        .btn:hover:not(:disabled) { background: var(--surface-color-light); }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn:hover { background: var(--surface-color-light); }
         .btn-primary { background: var(--accent); color: white; border-color: var(--accent); }
-        .btn-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+        .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
         .btn-success { background: rgba(16, 185, 129, 0.1); color: var(--success); border-color: var(--success); }
         .btn-success:hover { background: var(--success); color: white; }
         .btn-warning { background: rgba(245, 158, 11, 0.1); color: var(--warning); border-color: var(--warning); }
-        .btn-warning:hover:not(:disabled) { background: var(--warning); color: #fff; }
+        .btn-warning:hover { background: var(--warning); color: #fff; }
 
         .tabs { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
         .tab { padding: 0.5rem 1rem; cursor: pointer; border-bottom: 2px solid transparent; color: var(--text-muted); font-weight: 500; transition: color 0.2s; }
@@ -102,45 +105,86 @@
             border-top: 1px solid var(--border-color);
         }
 
+        /* Modal Styles */
         .modal-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px);
-            display: flex; justify-content: center; align-items: flex-start;
-            overflow-y: auto; opacity: 0; pointer-events: none;
-            transition: opacity 0.2s; z-index: 1000; padding: 3rem 1rem;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            overflow-y: auto;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            z-index: 1000;
+            padding: 3rem 1rem;
         }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
         .modal {
-            background: var(--surface-color); padding: 2.5rem; border-radius: 12px;
-            width: 100%; max-width: 800px; border: 1px solid var(--border-color);
+            background: var(--surface-color);
+            padding: 2.5rem;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 800px;
+            border: 1px solid var(--border-color);
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-            transform: translateY(-20px); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: translateY(-20px);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .modal-overlay.active .modal { transform: translateY(0); }
 
         .form-group { margin-bottom: 1.5rem; }
         .form-group label { display: block; margin-bottom: 0.5rem; color: var(--text-muted); font-weight: 500; }
         .form-control {
-            width: 100%; background: var(--bg-color); border: 1px solid var(--border-color);
-            color: var(--text-main); padding: 1rem; border-radius: 8px; font-size: 1.05rem; line-height: 1.6;
+            width: 100%;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 1.05rem;
+            line-height: 1.6;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
         .form-control:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
         textarea.form-control { resize: none; min-height: 200px; overflow-y: hidden; font-family: inherit; }
         
-        .modal-actions { display: flex; justify-content: flex-end; align-items: center; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-color);
+        }
         .shortcut-hint { color: var(--text-muted); font-size: 0.85rem; margin-right: auto; }
         kbd { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 6px; font-family: monospace; }
         
         .drag-indicator { color: var(--text-muted); cursor: grab; padding-right: 15px; font-size: 1.4rem; user-select: none; }
         .empty-state { text-align: center; padding: 4rem 2rem; color: var(--text-muted); background: var(--surface-color); border-radius: 10px; border: 1px dashed var(--border-color); font-size: 1.1rem; }
 
+        /* Toast Notifications */
         #toast {
-            position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(100px);
-            background: var(--text-main); color: var(--bg-color); padding: 0.75rem 1.5rem;
-            border-radius: 30px; font-weight: 500; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
-            opacity: 0; transition: transform 0.3s, opacity 0.3s; z-index: 2000;
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--text-main);
+            color: var(--bg-color);
+            padding: 0.75rem 1.5rem;
+            border-radius: 30px;
+            font-weight: 500;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: transform 0.3s, opacity 0.3s;
+            z-index: 2000;
         }
         #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        
+        /* Hidden file input */
         #file-import { display: none; }
     </style>
 </head>
@@ -149,7 +193,7 @@
     <header>
         <h1>📝 Post Manager</h1>
         <div class="header-actions">
-            <button id="sync-btn" class="btn btn-warning" onclick="copySyncLink()" title="Creates a tightly compressed URL to load these posts anywhere">🔗 Sync Link</button>
+            <button class="btn btn-warning" onclick="copySyncLink()" title="Creates a URL to load these posts in another browser">🔗 Sync Link</button>
             <button class="btn" onclick="exportData()" title="Download a local backup file">💾 Backup</button>
             <button class="btn" onclick="document.getElementById('file-import').click()" title="Load from backup file">📂 Load</button>
             <input type="file" id="file-import" accept=".json" onchange="importData(event)">
@@ -164,6 +208,7 @@
 
     <div id="post-container" class="post-list"></div>
 
+    <!-- Modal -->
     <div class="modal-overlay" id="post-modal" onclick="handleBackdropClick(event)">
         <div class="modal">
             <h2 id="modal-title" style="margin-bottom: 1.5rem;">Add Post</h2>
@@ -190,6 +235,7 @@
     <div id="toast">Notification</div>
 
     <script>
+        // Data truncated for brevity - it will use your previously provided 21 posts array.
         const defaultPosts =[
             { id: 1, title: "OpenClaw vs Blackbox CLI for local cron jobs?", content: "❓ Question\nI have a few automated data-cleanup scripts that I want to run autonomously every night.\nI'm currently writing python scripts to run my OpenClaw setup locally, but it breaks half the time because of weird environment issues. Would it be more stable to just trigger the Blackbox CLI agent via a standard cron?", isDone: false },
             { id: 2, title: "How are you guys saving/versioning your successful prompts?", content: "❓ Question\nI finally nailed a massive, 3-paragraph prompt that gets the agent to generate perfect Redux slices exactly according to my company's strict style guide.\nRight now, I literally just have it saved in a Notion doc that I copy-paste from. Is there a better way to version-control or manage custom prompt templates directly within the codebase or the Blackbox environment so the rest of my team can use them without asking me for the text file?", isDone: false },
@@ -219,9 +265,9 @@
         let draggedIndex = null;
         let toastTimeout;
 
-        async function init() {
-            const synced = await checkSyncLink();
-            if (synced) return; // checkSyncLink handles loading if URL exists
+        function init() {
+            // First check if coming from a Sync Link
+            if (checkSyncLink()) return;
 
             const savedData = localStorage.getItem('postManagerData');
             if (savedData) posts = JSON.parse(savedData);
@@ -231,56 +277,20 @@
             setupKeyboardShortcuts();
         }
 
-        // --- COMPRESSION LOGIC (Dramatically reduces URL size) ---
-        function bytesToBase64(bytes) {
-            let binary = '';
-            for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-            return btoa(binary);
-        }
+        // --- NEW SERVERLESS SYNC & BACKUP LOGIC ---
 
-        function base64ToBytes(base64) {
-            const binString = atob(base64);
-            const bytes = new Uint8Array(binString.length);
-            for (let i = 0; i < binString.length; i++) bytes[i] = binString.charCodeAt(i);
-            return bytes;
-        }
-
-        async function compressData(data) {
-            const jsonStr = JSON.stringify(data);
-            const stream = new Blob([jsonStr]).stream().pipeThrough(new CompressionStream('gzip'));
-            const compressedBuffer = await new Response(stream).arrayBuffer();
-            return bytesToBase64(new Uint8Array(compressedBuffer));
-        }
-
-        async function decompressData(base64Str) {
-            const bytes = base64ToBytes(base64Str);
-            const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-            const jsonStr = await new Response(stream).text();
-            return JSON.parse(jsonStr);
-        }
-
-        // --- SYNC & BACKUP ---
-        async function checkSyncLink() {
+        function checkSyncLink() {
             if(window.location.hash.startsWith('#sync=')) {
                 try {
                     const encoded = window.location.hash.replace('#sync=', '');
-                    
-                    let decodedPosts;
-                    try {
-                        // Try native decompression first (Tiny URL)
-                        decodedPosts = await decompressData(encoded);
-                    } catch(err) {
-                        // Fallback to uncompressed Base64 just in case it's an old link
-                        decodedPosts = JSON.parse(decodeURIComponent(escape(atob(encoded))));
-                    }
-
-                    if(Array.isArray(decodedPosts)) {
-                        posts = decodedPosts;
+                    // Safe UTF-8 Base64 decoding
+                    const decoded = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+                    if(Array.isArray(decoded)) {
+                        posts = decoded;
                         saveToLocalStorage();
-                        window.history.replaceState(null, null, window.location.pathname);
+                        window.history.replaceState(null, null, window.location.pathname); // Clear URL hash cleanly
                         renderPosts();
-                        setupKeyboardShortcuts();
-                        showToast("📥 Data successfully synced from URL!");
+                        showToast("📥 Data synced successfully from URL!");
                         return true;
                     }
                 } catch(e) { 
@@ -291,25 +301,16 @@
             return false;
         }
 
-        async function copySyncLink() {
-            const btn = document.getElementById('sync-btn');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '⏳ Compressing...';
-            btn.disabled = true;
-
+        function copySyncLink() {
             try {
-                // Compress data and convert to base64 URL chunk
-                const encoded = await compressData(posts);
+                // Safe UTF-8 Base64 encoding
+                const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(posts))));
                 const url = window.location.origin + window.location.pathname + '#sync=' + encoded;
-                
-                await navigator.clipboard.writeText(url);
-                showToast("🔗 Compressed link copied! Paste in any browser.");
+                navigator.clipboard.writeText(url).then(() => {
+                    showToast("🔗 Sync link copied! Paste it in any browser.");
+                });
             } catch(e) { 
-                console.error(e);
                 showToast("❌ Data too large. Use Backup instead."); 
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
             }
         }
 
@@ -319,7 +320,8 @@
             dlNode.setAttribute("href", dataStr);
             dlNode.setAttribute("download", `posts-backup-${new Date().toISOString().slice(0,10)}.json`);
             document.body.appendChild(dlNode);
-            dlNode.click(); dlNode.remove();
+            dlNode.click();
+            dlNode.remove();
             showToast("💾 Backup downloaded successfully");
         }
 
@@ -331,16 +333,21 @@
                 try {
                     const imported = JSON.parse(e.target.result);
                     if(Array.isArray(imported)) {
-                        posts = imported; saveToLocalStorage(); renderPosts();
+                        posts = imported;
+                        saveToLocalStorage();
+                        renderPosts();
                         showToast("📂 Data loaded successfully!");
                     } else throw new Error("Invalid format");
-                } catch(err) { showToast("❌ Failed to parse backup file."); }
-                event.target.value = ''; 
+                } catch(err) { 
+                    showToast("❌ Failed to parse backup file."); 
+                }
+                event.target.value = ''; // reset file input
             };
             reader.readAsText(file);
         }
 
-        // --- CORE UI ---
+        // --- CORE UI LOGIC ---
+
         function saveToLocalStorage() { localStorage.setItem('postManagerData', JSON.stringify(posts)); }
 
         function switchTab(tab) {
@@ -393,7 +400,7 @@
             });
         }
 
-        // --- DRAG & DROP ---
+        // --- DRAG & DROP LOGIC ---
         function handleDragStart(e, index) { draggedIndex = index; setTimeout(() => e.target.classList.add('dragging'), 0); e.dataTransfer.effectAllowed = 'move'; }
         function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
         function handleDrop(e, targetIndex) {
@@ -402,7 +409,8 @@
             const draggedItem = posts[draggedIndex];
             posts.splice(draggedIndex, 1);
             posts.splice(targetIndex, 0, draggedItem);
-            saveToLocalStorage(); renderPosts();
+            saveToLocalStorage();
+            renderPosts();
         }
         function handleDragEnd(e) { e.target.classList.remove('dragging'); draggedIndex = null; }
 
@@ -466,14 +474,17 @@
                 switchTab('active');
                 showToast('✅ New post added');
             }
-            saveToLocalStorage(); renderPosts(); closeModal();
+            saveToLocalStorage();
+            renderPosts();
+            closeModal();
         }
 
         function toggleDone(id) {
             const post = posts.find(p => p.id === id);
             if (post) {
                 post.isDone = !post.isDone;
-                saveToLocalStorage(); renderPosts();
+                saveToLocalStorage();
+                renderPosts();
                 showToast(post.isDone ? '📦 Archived' : '📝 Activated');
             }
         }
@@ -481,13 +492,16 @@
         function copyPost(id) {
             const post = posts.find(p => p.id === id);
             if (post) {
-                navigator.clipboard.writeText(`Title: ${post.title}\n\n${post.content}`).then(() => showToast('📋 Copied to clipboard!'));
+                navigator.clipboard.writeText(`Title: ${post.title}\n\n${post.content}`).then(() => {
+                    showToast('📋 Copied to clipboard!');
+                });
             }
         }
 
         function showToast(message) {
             const toast = document.getElementById('toast');
-            toast.innerText = message; toast.classList.add('show');
+            toast.innerText = message;
+            toast.classList.add('show');
             clearTimeout(toastTimeout);
             toastTimeout = setTimeout(() => toast.classList.remove('show'), 3000);
         }
