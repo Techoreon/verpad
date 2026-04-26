@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Dev Post Manager</title>
+    <style>
+        :root {
+            --bg-color: #0f1115;
+            --surface-color: #1a1d24;
+            --surface-color-light: #242831;
+            --border-color: #2e323a;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        h1 { font-size: 1.8rem; font-weight: 600; }
+
+        .header-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: var(--surface-color);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover { background: var(--surface-color-light); }
+        .btn-primary { background: var(--accent); color: white; border-color: var(--accent); }
+        .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+        .btn-success { background: rgba(16, 185, 129, 0.1); color: var(--success); border-color: var(--success); }
+        .btn-success:hover { background: var(--success); color: white; }
+        .btn-warning { background: rgba(245, 158, 11, 0.1); color: var(--warning); border-color: var(--warning); }
+        .btn-warning:hover { background: var(--warning); color: #fff; }
+
+        .tabs { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+        .tab { padding: 0.5rem 1rem; cursor: pointer; border-bottom: 2px solid transparent; color: var(--text-muted); font-weight: 500; transition: color 0.2s; }
+        .tab:hover { color: var(--text-main); }
+        .tab.active { border-bottom-color: var(--accent); color: var(--accent); }
+
+        .post-list { display: flex; flex-direction: column; gap: 1rem; }
+        
+        .post-card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+        }
+        .post-card:hover { border-color: #3f444e; }
+        .post-card.draggable { cursor: grab; }
+        .post-card.draggable:active { cursor: grabbing; }
+        .post-card.dragging { opacity: 0.5; transform: scale(0.98); }
+
+        .post-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+        .post-title { font-size: 1.25rem; font-weight: 600; color: #fff; line-height: 1.4; }
+        .post-content { color: var(--text-muted); white-space: pre-wrap; font-size: 1rem; line-height: 1.7; }
+        
+        .post-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            overflow-y: auto;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            z-index: 1000;
+            padding: 3rem 1rem;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal {
+            background: var(--surface-color);
+            padding: 2.5rem;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 800px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            transform: translateY(-20px);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .modal-overlay.active .modal { transform: translateY(0); }
+
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; color: var(--text-muted); font-weight: 500; }
+        .form-control {
+            width: 100%;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 1.05rem;
+            line-height: 1.6;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-control:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+        textarea.form-control { resize: none; min-height: 200px; overflow-y: hidden; font-family: inherit; }
+        
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+        .shortcut-hint { color: var(--text-muted); font-size: 0.85rem; margin-right: auto; }
+        kbd { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 6px; font-family: monospace; }
+        
+        .drag-indicator { color: var(--text-muted); cursor: grab; padding-right: 15px; font-size: 1.4rem; user-select: none; }
+        .empty-state { text-align: center; padding: 4rem 2rem; color: var(--text-muted); background: var(--surface-color); border-radius: 10px; border: 1px dashed var(--border-color); font-size: 1.1rem; }
+
+        /* Toast Notifications */
+        #toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--text-main);
+            color: var(--bg-color);
+            padding: 0.75rem 1.5rem;
+            border-radius: 30px;
+            font-weight: 500;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: transform 0.3s, opacity 0.3s;
+            z-index: 2000;
+        }
+        #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        
+        /* Hidden file input */
+        #file-import { display: none; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>📝 Post Manager</h1>
+        <div class="header-actions">
+            <button class="btn btn-warning" onclick="copySyncLink()" title="Creates a URL to load these posts in another browser">🔗 Sync Link</button>
+            <button class="btn" onclick="exportData()" title="Download a local backup file">💾 Backup</button>
+            <button class="btn" onclick="document.getElementById('file-import').click()" title="Load from backup file">📂 Load</button>
+            <input type="file" id="file-import" accept=".json" onchange="importData(event)">
+            <button class="btn btn-primary" onclick="openModal()">+ New Post</button>
+        </div>
+    </header>
+
+    <div class="tabs">
+        <div class="tab active" id="tab-active" onclick="switchTab('active')">Active Posts</div>
+        <div class="tab" id="tab-done" onclick="switchTab('done')">Done Archive 📦</div>
+    </div>
+
+    <div id="post-container" class="post-list"></div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="post-modal" onclick="handleBackdropClick(event)">
+        <div class="modal">
+            <h2 id="modal-title" style="margin-bottom: 1.5rem;">Add Post</h2>
+            <input type="hidden" id="post-id">
+            
+            <div class="form-group">
+                <label for="post-title-input">Title</label>
+                <input type="text" id="post-title-input" class="form-control" placeholder="Post title..." autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="post-content-input">Content</label>
+                <textarea id="post-content-input" class="form-control" placeholder="Write your post here..." oninput="autoResize(this)"></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <span class="shortcut-hint">Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to save</span>
+                <button class="btn" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="savePost()">Save Post</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast">Notification</div>
+
+    <script>
+        // Data truncated for brevity - it will use your previously provided 21 posts array.
+        const defaultPosts =[
+            { id: 1, title: "OpenClaw vs Blackbox CLI for local cron jobs?", content: "❓ Question\nI have a few automated data-cleanup scripts that I want to run autonomously every night.\nI'm currently writing python scripts to run my OpenClaw setup locally, but it breaks half the time because of weird environment issues. Would it be more stable to just trigger the Blackbox CLI agent via a standard cron?", isDone: false },
+            { id: 2, title: "How are you guys saving/versioning your successful prompts?", content: "❓ Question\nI finally nailed a massive, 3-paragraph prompt that gets the agent to generate perfect Redux slices exactly according to my company's strict style guide.\nRight now, I literally just have it saved in a Notion doc that I copy-paste from. Is there a better way to version-control or manage custom prompt templates directly within the codebase or the Blackbox environment so the rest of my team can use them without asking me for the text file?", isDone: false },
+            { id: 3, title: "Can vision models reliably read hex dumps from screenshots?", content: "I’m working on a low-level networking issue dealing with corrupted TCP packets.\n\nI have screenshots from Wireshark showing the raw hex dump alongside the ASCII panel. Instead of manually typing out ~128 bytes, I’m wondering if uploading the screenshot to Blackbox AI is reliable enough.\n\nHas anyone tried this?\nSpecifically, can it accurately OCR hex pairs and preserve byte alignment well enough to debug malformed offsets, or does it tend to misread characters and break the structure?\n\nTrying to figure out if this is viable or if I should just stick to copying raw dumps.", isDone: false },
+            { id: 4, title: "How do you stop the agent from downgrading your packages?", content: "❓ Question\nI'm working in a Next.js 15 project. I asked the CLI agent to install a markdown parser and wire it up.\nIt ran npm install marked@4 (which is like 3 major versions old) simply because that specific version is what it saw most frequently in its training data. Now my package-lock is polluted with old dependencies. Is there a flag to force the agent to always append @latest when it runs package manager commands autonomously?", isDone: false },
+            { id: 5, title: "Passing massive OpenAPI specs to the agent without blowing context?", content: "❓ Question\nI need the agent to write API wrappers for a massive enterprise backend. The Swagger/OpenAPI JSON file is over 20,000 lines long.\nIf I paste the whole thing into Blackbox, it consumes almost my entire context window, and its coding responses get incredibly slow and dumb.\nIs there a standard CLI tool or workflow you guys use to \"minify\" or strip down an OpenAPI spec (e.g., removing all the descriptions and examples, keeping only the paths and types) before feeding it to an LLM?", isDone: false },
+            { id: 6, title: "Does repo-chat cache branch state? Switching branches is confusing it", content: "I’ve noticed a really annoying quirk with Blackbox AI codebase awareness.\n\nI’ll be working on a feature branch, asking questions, and it’s perfectly in sync. Then I run git checkout main to look at a prod bug, ask something, and it starts referencing files and variables that only exist on the previous branch.\n\nIt feels like it’s caching the file tree for performance, but not picking up when the underlying repo state changes.\n\nRight now the only fix is restarting the extension to clear its “memory.”\nAre you guys seeing this kind of context bleed between branches, or is there a cache clear / re-index command I’m missing?", isDone: false },
+            { id: 7, title: "Does the CLI agent support SSH tunneling for remote execution?", content: "❓ Question\nI love using the Blackbox CLI on my local machine. But I have a staging server running on AWS that I only have access to via SSH. Has anyone figured out a clean workflow to let my local CLI agent execute bash commands or read files on that remote SSH server autonomously? I want to tell the agent: \"SSH into this box, read the nginx error logs, and tell me why it's failing.\" Can the agent securely handle SSH key handshakes without me exposing my private .pem file to the prompt?", isDone: false },
+            { id: 8, title: "Blackbox 'Apply' feature vs VS Code format-on-save", content: "❓ Question\nWhen I use the \"Apply to File\" button in the Blackbox extension, it inserts the code. But my VS Code is set to format-on-save using Prettier. As soon as I save the file, Prettier reformats the AI's code, which creates two separate entries in my undo stack. If I hit Cmd+Z, it undoes the formatting, but leaves the messy AI code. Has anyone found a smooth workflow for integrating AI code insertions with local formatters so it doesn't mess up the undo history?", isDone: false },
+            { id: 9, title: "Best way to feed large log files to the CLI?", content: "❓ Question\nI have a 15MB server log file and I need the agent to find the stack trace that caused a crash.\nI obviously can't pipe the entire 15MB text file into the Blackbox CLI without blowing past the context limit. Do you guys just use tail or grep to pre-filter the logs before sending them to the AI, or is there a tool/script that chunks log files efficiently for LLM analysis?", isDone: false },
+            { id: 10, title: "How are you handling copyright/GPL license risks with AI suggestions?", content: "❓ Question\nI’m working on a closed-source commercial app. Lately, I've noticed that when I ask tools like Copilot, Cursor, or Blackbox to implement very specific algorithms (like a custom fast-Fourier transform or specific video encoding), they spit out code that looks suspiciously identical to heavily GPL-licensed open-source libraries.\nIf the AI outputs a 50-line math function verbatim from a GPL repo without attributing it, we could technically be in legal trouble. Are your companies running compliance scanners on AI-generated code, or are you just relying on the tools' built-in \"block public code\" toggles (which seem pretty flaky)?", isDone: false },
+            { id: 11, title: "How are you handling stale docs in local LLM workflows?", content: "I prefer using local open-source models like llama 3 or deepseek via ollama for privacy, but their knowledge cutoff is killing me when I work with fast-moving libraries like langchain or next.js.\n\nI keep running into cases where the model gives outdated APIs, so I switch to something like Perplexity AI or Blackbox AI to fetch the latest docs, then paste it back into my editor.\n\nHas anyone found a smoother workflow for this? Specifically, is there a way to give a local IDE agent (e.g., Continue.dev) live web search or retrieval so it can pull updated docs on its own?", isDone: false },
+            { id: 12, title: "Can you checkpoint or snapshot an agent’s memory state?", content: "I’m in the middle of a multi-day refactor using Blackbox AI, and I’m running into a scaling issue.\n\nBy day 3, the chat session is so long that the IDE starts lagging. But if I start a new chat, the agent loses all the nuanced context about earlier architectural decisions.\n\nIs there any way to “checkpoint” the session — e.g., export the current context into a compressed JSON/Markdown state and reload it into a fresh chat?\nOr how are people handling this today?", isDone: false },
+            { id: 13, title: "Does the WhatsApp bot share context with the IDE extension?", content: "If I’m working in Visual Studio Code and hit a wall during a refactor, I sometimes have to step away (commute, etc.).\n\nIn theory, I’d like to open the WhatsApp bot and say something like:\n“continue where we left off on the UserService file.”\n\nDoes Blackbox AI actually share context between the IDE extension and the WhatsApp bot, or are those sessions completely isolated?", isDone: false },
+            { id: 14, title: "Are monoliths making a comeback because of AI?", content: "💬 Discussion\ntwo years ago, every tech lead was obsessed with breaking Node apps into 15 different microservices. now my new company is explicitly moving back to massive monolithic repos. the logic is simple, Blackbox's chat with codebase feature works like 10x better when the entire application, database, and frontend live in a single folder structure.\nMonolithic architecture is ironically becoming the \"modern\" best practice again simply because it fits perfectly into a 2m token context window. are your teams consolidating repos for the AI too?", isDone: false },
+            { id: 15, title: "“Ghost tab” context poisoning in the IDE?", content: "I was getting the weirdest hallucinations in the Blackbox AI VS Code extension yesterday. I asked it to write a simple API fetcher, and it kept returning fields like blood_pressure and heart_rate… I work in e-commerce.\n\nAfter some digging, I realized I had a random CSV of medical data open in a split tab that I hadn’t touched in days. My guess is the agent was still pulling context from that file and assuming it was relevant.\nHas anyone else run into this kind of “context bleed” from background tabs?", isDone: false },
+            { id: 16, title: "\"Clean Code\" in 2026 just means code that the LLM can read easily", content: "💬 Discussion\ni was reading uncle Bob’s Clean Code book again the other day and realised almost none of it applies anymore.\nnow if i break a process into 15 tiny files and helper functions, the AI agent gets lost traversing the import tree, even with a 2M token window.\nso somewhere or the other i find myself intentionally writing longer, flatter files with highly verbose, repetitive variable names, since the Blackbox context window seems to understand it better.", isDone: false },
+            { id: 17, title: "Sapiom wallets and the 2Captcha infinite money glitch", content: "💬 Discussion\nso i actually tried hooking up a small crypto wallet to my autonomous scraping agent using the Sapiom protocol. i gave it $20 just to see if it could handle paying for proxy rotations and CAPTCHA solving on its own while scraping a real-estate site.\ninstead of failing, the agent just kept pinging the paid 2Captcha human-solver API over and over again, failing the scrape, and retrying. it drained the entire $20 wallet in about 4 hours. giving agents financial autonomy is a massive mistake until they learn the concept of 'sunk cost'", isDone: false },
+            { id: 18, title: "64GB of RAM is the absolute minimum for dev machines now", content: "💬 Discussion\nremember when 16GB of RAM was considered plenty for web dev? i’m trying to run an OpenClaw fork locally to handle background tasks. between Docker, the local vector database, the IDE, Chrome, and the local quantized Llama model sitting in memory, my 32GB M1 Max is constantly swapping to disk.\nif you want to be a local-LLM purist and self-host your autonomous loops, you basically need to buy a $4,000 laptop now.", isDone: false },
+            { id: 19, title: "Imposter syndrome is completely universal now", content: "💬 Discussion\ni was having beers with my CTO yesterday. he’s brilliant, 15 years of experience. he confessed to me that he has absolutely no idea how our new payment routing microservice actually works under the hood.\na junior dev built it in 3 days using agents. it works, it handles millions in volume, but the logic is so dense and AI-optimized that even the principal engineers can't read it natively anymore.", isDone: false },
+            { id: 20, title: "Are we writing software, or just generating LLM training data?", content: "💬 Discussion\nI write code using Blackbox. That code gets committed to GitHub. Next year, the base models scrape GitHub to train the next generation of LLMs.\nThe AI is training on its own output.\nWe are literally just the human middlemen facilitating an endless feedback loop of machine-generated code teaching future machines how to code.", isDone: false },
+            { id: 21, title: "The .git folder context nightmare (Check your ignore files!)", content: "💬 Discussion\nI spent 4 hours yesterday fighting with the Blackbox repo-chat because it kept suggesting I use a variable name and a deprecated library that we ripped out of the codebase 6 months ago.\nI checked the agent's context logs. It had indexed my entire .git directory. It was reading the raw commit history and diff blobs from last year, blending the deleted legacy code with my current working tree, and hallucinating a hybrid architecture.", isDone: false }
+        ];
+
+        let posts =[];
+        let currentTab = 'active'; 
+        let draggedIndex = null;
+        let toastTimeout;
+
+        function init() {
+            // First check if coming from a Sync Link
+            if (checkSyncLink()) return;
+
+            const savedData = localStorage.getItem('postManagerData');
+            if (savedData) posts = JSON.parse(savedData);
+            else { posts = [...defaultPosts]; saveToLocalStorage(); }
+            
+            renderPosts();
+            setupKeyboardShortcuts();
+        }
+
+        // --- NEW SERVERLESS SYNC & BACKUP LOGIC ---
+
+        function checkSyncLink() {
+            if(window.location.hash.startsWith('#sync=')) {
+                try {
+                    const encoded = window.location.hash.replace('#sync=', '');
+                    // Safe UTF-8 Base64 decoding
+                    const decoded = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+                    if(Array.isArray(decoded)) {
+                        posts = decoded;
+                        saveToLocalStorage();
+                        window.history.replaceState(null, null, window.location.pathname); // Clear URL hash cleanly
+                        renderPosts();
+                        showToast("📥 Data synced successfully from URL!");
+                        return true;
+                    }
+                } catch(e) { 
+                    console.error(e);
+                    showToast("❌ Sync link corrupted or invalid."); 
+                }
+            }
+            return false;
+        }
+
+        function copySyncLink() {
+            try {
+                // Safe UTF-8 Base64 encoding
+                const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(posts))));
+                const url = window.location.origin + window.location.pathname + '#sync=' + encoded;
+                navigator.clipboard.writeText(url).then(() => {
+                    showToast("🔗 Sync link copied! Paste it in any browser.");
+                });
+            } catch(e) { 
+                showToast("❌ Data too large. Use Backup instead."); 
+            }
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(posts, null, 2));
+            const dlNode = document.createElement('a');
+            dlNode.setAttribute("href", dataStr);
+            dlNode.setAttribute("download", `posts-backup-${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(dlNode);
+            dlNode.click();
+            dlNode.remove();
+            showToast("💾 Backup downloaded successfully");
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if(Array.isArray(imported)) {
+                        posts = imported;
+                        saveToLocalStorage();
+                        renderPosts();
+                        showToast("📂 Data loaded successfully!");
+                    } else throw new Error("Invalid format");
+                } catch(err) { 
+                    showToast("❌ Failed to parse backup file."); 
+                }
+                event.target.value = ''; // reset file input
+            };
+            reader.readAsText(file);
+        }
+
+        // --- CORE UI LOGIC ---
+
+        function saveToLocalStorage() { localStorage.setItem('postManagerData', JSON.stringify(posts)); }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('tab-active').classList.toggle('active', tab === 'active');
+            document.getElementById('tab-done').classList.toggle('active', tab === 'done');
+            renderPosts();
+        }
+
+        function renderPosts() {
+            const container = document.getElementById('post-container');
+            container.innerHTML = '';
+            const filteredPosts = posts.filter(p => currentTab === 'active' ? !p.isDone : p.isDone);
+
+            if (filteredPosts.length === 0) {
+                container.innerHTML = `<div class="empty-state">No ${currentTab} posts found.</div>`;
+                return;
+            }
+
+            filteredPosts.forEach((post) => {
+                const globalIndex = posts.findIndex(p => p.id === post.id);
+                const card = document.createElement('div');
+                card.className = `post-card ${currentTab === 'active' ? 'draggable' : ''}`;
+                if (currentTab === 'active') {
+                    card.draggable = true;
+                    card.addEventListener('dragstart', (e) => handleDragStart(e, globalIndex));
+                    card.addEventListener('dragover', handleDragOver);
+                    card.addEventListener('drop', (e) => handleDrop(e, globalIndex));
+                    card.addEventListener('dragend', handleDragEnd);
+                }
+
+                card.innerHTML = `
+                    <div class="post-header">
+                        <div style="display: flex; align-items: flex-start; width: 100%;">
+                            ${currentTab === 'active' ? `<span class="drag-indicator" title="Drag to reorder">⋮⋮</span>` : ''}
+                            <div class="post-title">${escapeHTML(post.title)}</div>
+                        </div>
+                    </div>
+                    <div class="post-content">${escapeHTML(post.content)}</div>
+                    <div class="post-actions">
+                        <button class="btn" onclick="copyPost(${post.id})">📋 Copy</button>
+                        <button class="btn" onclick="editPost(${post.id})">✏️ Edit</button>
+                        ${!post.isDone 
+                            ? `<button class="btn btn-success" onclick="toggleDone(${post.id})">✅ Done</button>` 
+                            : `<button class="btn" onclick="toggleDone(${post.id})">↩️ Activate</button>`
+                        }
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // --- DRAG & DROP LOGIC ---
+        function handleDragStart(e, index) { draggedIndex = index; setTimeout(() => e.target.classList.add('dragging'), 0); e.dataTransfer.effectAllowed = 'move'; }
+        function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+        function handleDrop(e, targetIndex) {
+            e.preventDefault();
+            if (draggedIndex === null || draggedIndex === targetIndex) return;
+            const draggedItem = posts[draggedIndex];
+            posts.splice(draggedIndex, 1);
+            posts.splice(targetIndex, 0, draggedItem);
+            saveToLocalStorage();
+            renderPosts();
+        }
+        function handleDragEnd(e) { e.target.classList.remove('dragging'); draggedIndex = null; }
+
+        // --- EDITING & MODAL ---
+        function autoResize(textarea) { textarea.style.height = 'auto'; textarea.style.height = (textarea.scrollHeight) + 'px'; }
+        function handleBackdropClick(e) { if (e.target.id === 'post-modal') closeModal(); }
+        
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                const modal = document.getElementById('post-modal');
+                if (!modal.classList.contains('active')) return;
+                if (e.key === 'Escape') closeModal();
+                else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); savePost(); }
+            });
+        }
+
+        function openModal() {
+            document.getElementById('post-id').value = '';
+            document.getElementById('post-title-input').value = '';
+            const contentInput = document.getElementById('post-content-input');
+            contentInput.value = '';
+            document.getElementById('modal-title').innerText = 'Add New Post';
+            document.getElementById('post-modal').classList.add('active');
+            contentInput.style.height = 'auto';
+            document.getElementById('post-title-input').focus();
+        }
+
+        function editPost(id) {
+            const post = posts.find(p => p.id === id);
+            if (post) {
+                document.getElementById('post-id').value = post.id;
+                document.getElementById('post-title-input').value = post.title;
+                const contentInput = document.getElementById('post-content-input');
+                contentInput.value = post.content;
+                document.getElementById('modal-title').innerText = 'Edit Post';
+                document.getElementById('post-modal').classList.add('active');
+                setTimeout(() => {
+                    autoResize(contentInput);
+                    contentInput.focus();
+                    contentInput.setSelectionRange(contentInput.value.length, contentInput.value.length);
+                }, 10);
+            }
+        }
+
+        function closeModal() { document.getElementById('post-modal').classList.remove('active'); }
+
+        function savePost() {
+            const idInput = document.getElementById('post-id').value;
+            const titleInput = document.getElementById('post-title-input').value.trim();
+            const contentInput = document.getElementById('post-content-input').value.trim();
+
+            if (!titleInput || !contentInput) { showToast('⚠️ Provide both title and content.'); return; }
+
+            if (idInput) {
+                const post = posts.find(p => p.id == idInput);
+                if (post) { post.title = titleInput; post.content = contentInput; }
+                showToast('✅ Post updated');
+            } else {
+                const newId = posts.length > 0 ? Math.max(...posts.map(p => p.id)) + 1 : 1;
+                posts.unshift({ id: newId, title: titleInput, content: contentInput, isDone: false });
+                switchTab('active');
+                showToast('✅ New post added');
+            }
+            saveToLocalStorage();
+            renderPosts();
+            closeModal();
+        }
+
+        function toggleDone(id) {
+            const post = posts.find(p => p.id === id);
+            if (post) {
+                post.isDone = !post.isDone;
+                saveToLocalStorage();
+                renderPosts();
+                showToast(post.isDone ? '📦 Archived' : '📝 Activated');
+            }
+        }
+
+        function copyPost(id) {
+            const post = posts.find(p => p.id === id);
+            if (post) {
+                navigator.clipboard.writeText(`Title: ${post.title}\n\n${post.content}`).then(() => {
+                    showToast('📋 Copied to clipboard!');
+                });
+            }
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.classList.add('show');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function escapeHTML(str) { return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)); }
+
+        init();
+    </script>
+</body>
+</html>
