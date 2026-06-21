@@ -324,10 +324,11 @@
         }
 
         function savePoem() {
-            const title = titleInput.value.trim() || 'Untitled Poem';
+            // Replaced the 'Untitled Poem' fallback with just empty string
+            const title = titleInput.value.trim(); 
             const content = contentInput.value;
             
-            if(!content.trim() && !titleInput.value.trim()) {
+            if(!content.trim() && !title) {
                 showToast('Cannot save an empty canvas.');
                 return;
             }
@@ -376,12 +377,15 @@
                 // Clean snippet by stripping newlines for the card view
                 const snippetText = poem.content.replace(/\n/g, ' ').substring(0, 80) + (poem.content.length > 80 ? '...' : '');
                 
+                // Conditionally render the title ONLY if it exists
+                const titleHtml = poem.title ? `<div class="poem-card-title">${escapeHTML(poem.title)}</div>` : '';
+                
                 const card = document.createElement('div');
                 card.className = `poem-card ${poem.id === currentPoemId ? 'active-card' : ''}`;
                 card.onclick = () => window.loadPoem(poem.id);
                 
                 card.innerHTML = `
-                    <div class="poem-card-title">${escapeHTML(poem.title)}</div>
+                    ${titleHtml}
                     <div class="poem-card-date">${dateStr}</div>
                     <div class="poem-card-snippet">${escapeHTML(snippetText)}</div>
                     <div class="poem-card-actions">
@@ -421,15 +425,21 @@
 
         // Download as Text File
         window.exportPoem = function() {
-            const title = titleInput.value.trim() || 'Untitled_Poem';
+            const title = titleInput.value.trim();
             const text = contentInput.value;
             if(!text.trim() && !title) return showToast("Nothing to export yet.");
             
-            const blob = new Blob([`${title}\n\n${text}`], { type: 'text/plain' });
+            // If no title is given, default to 'Poem' just for the file download name
+            const fileName = title ? title.replace(/\s+/g, '_') : 'Poem';
+            
+            // Do not print the title inside the text file if there is none
+            const fileContent = title ? `${title}\n\n${text}` : text;
+
+            const blob = new Blob([fileContent], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${title.replace(/\s+/g, '_')}.txt`;
+            a.download = `${fileName}.txt`;
             a.click();
             URL.revokeObjectURL(url);
             showToast('File downloaded.');
