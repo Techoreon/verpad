@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poesy - Advanced Poetry Studio</title>
+    
+    <!-- Elegant Fonts for Poetry and UI -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg: #0d1117;
+            --panel-bg: #161b22;
+            --border: #30363d;
+            --primary: #c9a96e; /* Elegant poetic gold */
+            --primary-hover: #e0c28d;
+            --text-main: #c9d1d9;
+            --text-muted: #8b949e;
+            --danger: #da3633;
+            --danger-hover: #f85149;
+            --card-hover: rgba(201, 169, 110, 0.05);
+        }
+
+        * { box-sizing: border-box; }
+
+        body, html {
+            margin: 0; padding: 0; height: 100%;
+            background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* ----- Shared Panel Styles ----- */
+        .panel-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 1.5rem; border-bottom: 1px solid var(--border);
+            height: 75px; flex-shrink: 0;
+        }
+        
+        /* ----- Library Panel (Left Sidebar) ----- */
+        .library-panel {
+            width: 25%; min-width: 280px; max-width: 350px;
+            background: var(--panel-bg);
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column;
+        }
+        .brand {
+            font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 600;
+            color: var(--primary); display: flex; align-items: center; gap: 0.6rem;
+        }
+        .cards-container {
+            flex: 1; overflow-y: auto; padding: 1.5rem;
+            display: flex; flex-direction: column; gap: 1rem;
+        }
+        
+        /* Poem Cards */
+        .poem-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px; padding: 1.2rem;
+            cursor: pointer; transition: all 0.2s ease-in-out;
+            position: relative;
+        }
+        .poem-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .poem-card.active-card {
+            border-color: var(--primary);
+            background: var(--card-hover);
+        }
+        .poem-card-title {
+            font-family: 'Playfair Display', serif; font-weight: 600; font-size: 1.2rem;
+            margin-bottom: 0.4rem; color: var(--text-main);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .poem-card-date { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.8rem; }
+        .poem-card-snippet {
+            font-size: 0.85rem; color: var(--text-muted); line-height: 1.4;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+            overflow: hidden; text-overflow: ellipsis; margin-bottom: 1rem;
+        }
+        .poem-card-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+        .poem-card button {
+            background: transparent; border: none; color: var(--text-muted);
+            padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.8rem;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .poem-card button:hover { background: rgba(255,255,255,0.1); color: var(--text-main); }
+        .poem-card .btn-delete:hover { background: rgba(218, 54, 51, 0.15); color: var(--danger-hover); }
+
+        /* ----- Editor Panel (Center) ----- */
+        .editor-panel {
+            flex: 1; display: flex; flex-direction: column;
+            padding: 2rem 3rem; position: relative;
+        }
+        .editor-wrapper {
+            flex: 1; display: flex; flex-direction: column; overflow: hidden; padding-bottom: 1rem;
+        }
+        .editor-title {
+            font-family: 'Playfair Display', serif; font-size: 2.8rem; font-weight: 600;
+            width: 100%; background: transparent; border: none; color: var(--primary);
+            outline: none; margin-bottom: 1.5rem;
+        }
+        .editor-title::placeholder { color: rgba(201, 169, 110, 0.3); }
+        .editor-textarea {
+            font-family: 'Playfair Display', serif; font-size: 1.4rem; line-height: 1.9;
+            width: 100%; flex: 1; background: transparent; border: none; color: var(--text-main);
+            resize: none; outline: none; white-space: pre-wrap; overflow-y: auto; padding-right: 1rem;
+        }
+        .editor-textarea::placeholder { color: rgba(139, 148, 158, 0.4); font-style: italic; }
+        
+        .editor-footer {
+            display: flex; justify-content: space-between; align-items: center;
+            padding-top: 1.5rem; border-top: 1px solid var(--border);
+        }
+        .stats { color: var(--text-muted); font-size: 0.9rem; letter-spacing: 0.5px; }
+        .actions { display: flex; gap: 1rem; }
+
+        /* ----- Toolkit Panel (Right Sidebar) ----- */
+        .toolkit-panel {
+            width: 22%; min-width: 300px; max-width: 380px;
+            background: var(--panel-bg);
+            border-left: 1px solid var(--border);
+            display: flex; flex-direction: column;
+        }
+        .header-title {
+            font-size: 1.1rem; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;
+        }
+        .toolkit-tabs { display: flex; border-bottom: 1px solid var(--border); }
+        .toolkit-tab {
+            flex: 1; text-align: center; padding: 1rem 0.5rem; cursor: pointer;
+            color: var(--text-muted); font-size: 0.85rem; font-weight: 500;
+            transition: all 0.2s; border-bottom: 2px solid transparent;
+        }
+        .toolkit-tab:hover { color: var(--text-main); background: rgba(255,255,255,0.02); }
+        .toolkit-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+        
+        .toolkit-content {
+            padding: 1.5rem; display: flex; flex-direction: column; flex: 1; overflow: hidden;
+        }
+        .toolkit-search { display: flex; gap: 0.5rem; margin-bottom: 0.8rem; }
+        .toolkit-search input {
+            flex: 1; padding: 0.7rem 1rem; border-radius: 6px; border: 1px solid var(--border);
+            background: var(--bg); color: var(--text-main); font-family: 'Inter', sans-serif;
+            outline: none; font-size: 0.9rem; transition: border 0.2s;
+        }
+        .toolkit-search input:focus { border-color: var(--primary); }
+        .toolkit-search button {
+            padding: 0 1.2rem; background: var(--primary); color: #000; border: none;
+            border-radius: 6px; cursor: pointer; transition: all 0.2s;
+        }
+        .toolkit-search button:hover { background: var(--primary-hover); transform: scale(1.02); }
+        
+        .help-text { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem; }
+        
+        .toolkit-results {
+            display: flex; flex-wrap: wrap; gap: 0.6rem; overflow-y: auto;
+            flex: 1; align-content: flex-start;
+        }
+        .result-chip {
+            background: var(--bg); border: 1px solid var(--border);
+            padding: 0.5rem 0.8rem; border-radius: 20px; font-size: 0.9rem;
+            cursor: pointer; transition: all 0.2s;
+            font-family: 'Playfair Display', serif; font-style: italic; letter-spacing: 0.5px;
+        }
+        .result-chip:hover {
+            border-color: var(--primary); color: var(--primary); background: var(--card-hover);
+            transform: translateY(-1px);
+        }
+        .loading, .no-results {
+            width: 100%; text-align: center; padding: 2rem 1rem;
+            color: var(--text-muted); font-size: 0.9rem;
+        }
+
+        /* Buttons & Utilities */
+        .icon-btn {
+            background: transparent; border: 1px solid var(--border); color: var(--text-main);
+            width: 38px; height: 38px; border-radius: 50%; cursor: pointer; transition: all 0.2s;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .icon-btn:hover { background: var(--primary); color: #000; border-color: var(--primary); }
+
+        .btn {
+            padding: 0.7rem 1.4rem; border-radius: 6px; font-size: 0.95rem; font-weight: 500;
+            cursor: pointer; display: flex; align-items: center; gap: 0.6rem; border: none; transition: all 0.2s;
+        }
+        .btn-primary { background: var(--primary); color: #000; }
+        .btn-primary:hover { background: var(--primary-hover); box-shadow: 0 0 12px rgba(201,169,110,0.3); }
+        .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+        .btn-secondary:hover { background: var(--border); }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #4b535d; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6e7681; }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed; bottom: 30px; right: 30px; background: var(--primary);
+            color: #000; font-weight: 500; padding: 1rem 1.5rem; border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            opacity: 0; transform: translateY(20px); transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            z-index: 9999; pointer-events: none; display: flex; align-items: center; gap: 0.5rem;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 1024px) {
+            .app-container { flex-direction: column; overflow-y: auto; height: auto; }
+            .library-panel, .toolkit-panel { width: 100%; max-width: 100%; border: none; border-bottom: 1px solid var(--border); }
+            .library-panel { height: 40vh; min-height: 350px; }
+            .editor-panel { min-height: 70vh; padding: 1.5rem; }
+            .toolkit-panel { height: 50vh; min-height: 400px; border-top: 1px solid var(--border); }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        
+        <!-- Library Panel -->
+        <div class="library-panel">
+            <div class="panel-header">
+                <div class="brand"><i class="fa-solid fa-feather-pointed"></i> Poesy</div>
+                <button class="icon-btn" id="new-btn" title="Create New Poem"><i class="fa-solid fa-plus"></i></button>
+            </div>
+            <div class="cards-container" id="cards-container">
+                <!-- Javascript will inject saved cards here -->
+            </div>
+        </div>
+
+        <!-- Editor Panel -->
+        <div class="editor-panel">
+            <div class="editor-wrapper">
+                <input type="text" id="poem-title" class="editor-title" placeholder="Title your masterpiece..." autocomplete="off">
+                <textarea id="poem-content" class="editor-textarea" placeholder="Let the ink flow..."></textarea>
+            </div>
+            <div class="editor-footer">
+                <div class="stats" id="stats">Words: 0 &nbsp;|&nbsp; Lines: 0</div>
+                <div class="actions">
+                    <button class="btn btn-secondary" onclick="exportPoem()"><i class="fa-solid fa-download"></i> Export</button>
+                    <button class="btn btn-primary" id="save-btn"><i class="fa-solid fa-floppy-disk"></i> Save Poem</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toolkit Panel -->
+        <div class="toolkit-panel">
+            <div class="panel-header">
+                <div class="header-title"><i class="fa-solid fa-wand-magic-sparkles"></i> Writer's Toolkit</div>
+            </div>
+            <div class="toolkit-tabs">
+                <div class="toolkit-tab active" id="tab-eng-syn" onclick="setTab('eng-syn')">EN Synonyms</div>
+                <div class="toolkit-tab" id="tab-eng-rhy" onclick="setTab('eng-rhy')">EN Rhymes</div>
+                <div class="toolkit-tab" id="tab-hin-syn" onclick="setTab('hin-syn')">HI Synonyms</div>
+            </div>
+            <div class="toolkit-content">
+                <div class="toolkit-search">
+                    <input type="text" id="toolkit-search-input" placeholder="Enter a word...">
+                    <button id="toolkit-search-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
+                </div>
+                <p class="help-text">Click any generated word to instantly copy it.</p>
+                <div class="toolkit-results" id="toolkit-results">
+                    <div class="no-results">Your creative suggestions will appear here.</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Toast UI -->
+    <div class="toast" id="toast">
+        <i class="fa-solid fa-circle-check"></i> <span id="toast-msg"></span>
+    </div>
+
+    <script>
+        // --- 1. State Management ---
+        const STORAGE_KEY = 'poesy_saved_works';
+        let poems = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        let currentPoemId = null;
+
+        // DOM Elements
+        const titleInput = document.getElementById('poem-title');
+        const contentInput = document.getElementById('poem-content');
+        const cardsContainer = document.getElementById('cards-container');
+        const searchInput = document.getElementById('toolkit-search-input');
+        const resultsContainer = document.getElementById('toolkit-results');
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toast-msg');
+
+        // --- 2. Core Editor & Library Logic ---
+        function init() {
+            if(poems.length > 0) {
+                window.loadPoem(poems[0].id);
+            } else {
+                createNewPoem();
+            }
+            renderCards();
+        }
+
+        function generateId() {
+            return 'poem_' + Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        function createNewPoem() {
+            currentPoemId = null;
+            titleInput.value = '';
+            contentInput.value = '';
+            updateStats();
+            renderCards(); // Clear active state
+        }
+
+        function savePoem() {
+            const title = titleInput.value.trim() || 'Untitled Poem';
+            const content = contentInput.value;
+            
+            if(!content.trim() && !titleInput.value.trim()) {
+                showToast('Cannot save an empty canvas.');
+                return;
+            }
+
+            if(currentPoemId) {
+                // Update Existing
+                const index = poems.findIndex(p => p.id === currentPoemId);
+                if(index !== -1) {
+                    poems[index].title = title;
+                    poems[index].content = content;
+                    poems[index].date = new Date().toISOString();
+                    
+                    // Move recently updated to top
+                    const updatedPoem = poems.splice(index, 1)[0];
+                    poems.unshift(updatedPoem);
+                }
+            } else {
+                // Create New
+                currentPoemId = generateId();
+                poems.unshift({
+                    id: currentPoemId,
+                    title: title,
+                    content: content,
+                    date: new Date().toISOString()
+                });
+            }
+            
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(poems));
+            renderCards();
+            showToast('Poem saved to your library.');
+        }
+
+        function renderCards() {
+            cardsContainer.innerHTML = '';
+            
+            if(poems.length === 0) {
+                cardsContainer.innerHTML = '<div class="no-results">No saved poems yet.</div>';
+                return;
+            }
+
+            poems.forEach(poem => {
+                const dateObj = new Date(poem.date);
+                const dateOptions = { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+                const dateStr = dateObj.toLocaleDateString('en-US', dateOptions);
+                
+                // Clean snippet by stripping newlines for the card view
+                const snippetText = poem.content.replace(/\n/g, ' ').substring(0, 80) + (poem.content.length > 80 ? '...' : '');
+                
+                const card = document.createElement('div');
+                card.className = `poem-card ${poem.id === currentPoemId ? 'active-card' : ''}`;
+                card.onclick = () => window.loadPoem(poem.id);
+                
+                card.innerHTML = `
+                    <div class="poem-card-title">${escapeHTML(poem.title)}</div>
+                    <div class="poem-card-date">${dateStr}</div>
+                    <div class="poem-card-snippet">${escapeHTML(snippetText)}</div>
+                    <div class="poem-card-actions">
+                        <button class="btn-delete" onclick="window.deletePoem('${poem.id}', event)">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                `;
+                cardsContainer.appendChild(card);
+            });
+        }
+
+        window.loadPoem = function(id) {
+            const poem = poems.find(p => p.id === id);
+            if(poem) {
+                currentPoemId = poem.id;
+                titleInput.value = poem.title;
+                contentInput.value = poem.content;
+                updateStats();
+                renderCards(); 
+            }
+        };
+
+        window.deletePoem = function(id, event) {
+            event.stopPropagation(); // Prevents clicking the card background
+            if(confirm('Are you sure you want to permanently delete this poem?')) {
+                poems = poems.filter(p => p.id !== id);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(poems));
+                if(currentPoemId === id) {
+                    createNewPoem();
+                } else {
+                    renderCards();
+                }
+                showToast('Poem removed.');
+            }
+        };
+
+        // Download as Text File
+        window.exportPoem = function() {
+            const title = titleInput.value.trim() || 'Untitled_Poem';
+            const text = contentInput.value;
+            if(!text.trim() && !title) return showToast("Nothing to export yet.");
+            
+            const blob = new Blob([`${title}\n\n${text}`], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${title.replace(/\s+/g, '_')}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('File downloaded.');
+        };
+
+        // Stats tracking
+        function updateStats() {
+            const text = contentInput.value;
+            const lines = text ? text.split('\n').length : 0;
+            const words = text ? text.trim().split(/\s+/).filter(w => w.length > 0).length : 0;
+            document.getElementById('stats').innerHTML = `Words: ${words} &nbsp;|&nbsp; Lines: ${lines}`;
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag] || tag));
+        }
+
+        // --- 3. Advanced Writer's Toolkit (Synonyms & Rhymes) ---
+        let activeTab = 'eng-syn'; // eng-syn, eng-rhy, hin-syn
+
+        window.setTab = function(tabId) {
+            activeTab = tabId;
+            document.querySelectorAll('.toolkit-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            
+            resultsContainer.innerHTML = '<div class="no-results">Your creative suggestions will appear here.</div>';
+            searchInput.value = '';
+            
+            if(tabId === 'hin-syn') searchInput.placeholder = 'हिंदी शब्द दर्ज करें (e.g. प्यार)...';
+            else if(tabId === 'eng-rhy') searchInput.placeholder = 'Enter a word to rhyme with...';
+            else searchInput.placeholder = 'Enter a word for synonyms...';
+        };
+
+        async function searchToolkit() {
+            const word = searchInput.value.trim().toLowerCase();
+            if(!word) return;
+            
+            resultsContainer.innerHTML = '<div class="loading"><i class="fa-solid fa-spinner fa-spin"></i> &nbsp; Searching the muse...</div>';
+            
+            let results = [];
+            if(activeTab === 'eng-syn') results = await getEnglishSynonyms(word);
+            else if(activeTab === 'eng-rhy') results = await getEnglishRhymes(word);
+            else if(activeTab === 'hin-syn') results = await getHindiSynonyms(word);
+            
+            renderResults(results);
+        }
+
+        // API 1: Datamuse API (English Synonyms)
+        async function getEnglishSynonyms(word) {
+            try {
+                const res = await fetch(`https://api.datamuse.com/words?rel_syn=${word}`);
+                const data = await res.json();
+                return data.map(d => d.word);
+            } catch(e) { return []; }
+        }
+
+        // API 2: Datamuse API (English Rhymes)
+        async function getEnglishRhymes(word) {
+            try {
+                const res = await fetch(`https://api.datamuse.com/words?rel_rhy=${word}`);
+                const data = await res.json();
+                return data.map(d => d.word);
+            } catch(e) { return []; }
+        }
+
+        // Expanded Local Poetic Hindi Thesaurus fallback
+        const hindiThesaurus = {
+            'प्यार': ['प्रेम', 'इश्क', 'मोहब्बत', 'अनुराग', 'प्रणय', 'प्रीति', 'उलफत'],
+            'सुंदर': ['खूबसूरत', 'हसीन', 'आकर्षक', 'मनोहर', 'रमणीय', 'चारु', 'मनमोहक'],
+            'चाँद': ['चंद्रमा', 'शशि', 'मयंक', 'इंदु', 'राकेश', 'सुधाकर', 'चंदा'],
+            'सूरज': ['सूर्य', 'रवि', 'दिनकर', 'भास्कर', 'प्रभाकर', 'दिवाकर'],
+            'रात': ['रात्रि', 'निशा', 'रजनी', 'यामिनी', 'विभावरी', 'शब'],
+            'पानी': ['जल', 'नीर', 'सलिल', 'वारि', 'अंबु', 'तोय'],
+            'हवा': ['वायु', 'पवन', 'समीर', 'अनिल', 'मारुत', 'हवाएं'],
+            'फूल': ['पुष्प', 'सुमन', 'कुसुम', 'प्रसून', 'गुल'],
+            'दोस्त': ['मित्र', 'सखा', 'मीत', 'सहचर', 'बंधु', 'यार'],
+            'दर्द': ['व्यथा', 'पीड़ा', 'तकलीफ', 'दुःख', 'वेदना', 'संताप', 'गम'],
+            'आसमान': ['आकाश', 'गगन', 'अंबर', 'नभ', 'व्योम', 'फलक'],
+            'धरती': ['पृथ्वी', 'भूमि', 'धरा', 'वसुंधरा', 'अवनी', 'ज़मीन'],
+            'आग': ['अग्नि', 'अनल', 'पावक', 'ज्वाला'],
+            'आँख': ['नेत्र', 'नयन', 'चक्षु', 'लोचन', 'दृग', 'दीदा'],
+            'दिल': ['हृदय', 'मन', 'अंतःकरण', 'चित्त', 'उर'],
+            'खुशी': ['प्रसन्नता', 'आनंद', 'हर्ष', 'उल्लास', 'मुदित', 'शादमानी'],
+            'आंसू': ['अश्रु', 'नेत्रजल', 'नयनजल', 'रोदन', 'अश्क'],
+            'जीवन': ['ज़िंदगी', 'प्राण', 'हयात', 'आयु', 'हस्ती'],
+            'मौत': ['मृत्यु', 'मरण', 'निधन', 'इंतकाल', 'अवसान'],
+            'नदी': ['सरिता', 'तटिनी', 'तरंगिणी', 'निर्झरिणी', 'दरिया'],
+            'पहाड़': ['पर्वत', 'गिरि', 'अचल', 'भूधर', 'शैल', 'कोह'],
+            'पेड़': ['वृक्ष', 'तरु', 'विटप', 'द्रुम', 'पादप', 'शजर'],
+            'उम्मीद': ['आशा', 'आस', 'प्रत्याशा'],
+            'खामोशी': ['चुप्पी', 'मौन', 'नीरवता', 'शांति', 'सन्नाटा'],
+            'तन्हाई': ['अकेलापन', 'एकांत', 'विजन', 'वीरानी'],
+            'शाम': ['संध्या', 'सायंकाल', 'गोधूलि', 'सांझ'],
+            'सुबह': ['सवेरा', 'भोर', 'प्रभात', 'अरुणोदय', 'प्रातः', 'सहर'],
+            'ख्वाब': ['सपना', 'स्वप्न', 'कल्पना', 'तसव्वुर'],
+            'नशा': ['मद', 'खुमारी', 'मादकता', 'उन्माद', 'सुरूर']
+        };
+
+        // API 3: Dictionary API (Hindi) + Advanced Poetic Local Fallback
+        async function getHindiSynonyms(word) {
+            let synonyms = new Set();
+            
+            // 1. Try robust local mapping tailored for poets
+            if (hindiThesaurus[word]) {
+                hindiThesaurus[word].forEach(s => synonyms.add(s));
+            }
+            
+            // 2. Fetch from Free Dictionary API to pull broad dictionary data
+            try {
+                const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/hi/${word}`);
+                if(res.ok) {
+                    const data = await res.json();
+                    if(Array.isArray(data)) {
+                        data.forEach(entry => {
+                            if(entry.meanings) {
+                                entry.meanings.forEach(meaning => {
+                                    if(meaning.synonyms && Array.isArray(meaning.synonyms)) {
+                                        meaning.synonyms.forEach(syn => synonyms.add(syn));
+                                    }
+                                });
+                            }
+                        });
+                    }
+                }
+            } catch(e) {
+                console.log("External Hindi dictionary lookup bypassed due to network.");
+            }
+            
+            return Array.from(synonyms);
+        }
+
+        function renderResults(results) {
+            resultsContainer.innerHTML = '';
+            if(results.length === 0) {
+                resultsContainer.innerHTML = '<div class="no-results">Alas, no matches found. Try another word.</div>';
+                return;
+            }
+            
+            results.forEach(word => {
+                const chip = document.createElement('div');
+                chip.className = 'result-chip';
+                chip.textContent = word;
+                chip.onclick = () => {
+                    navigator.clipboard.writeText(word);
+                    showToast(`Copied "${word}" to clipboard!`);
+                };
+                resultsContainer.appendChild(chip);
+            });
+        }
+
+        // --- Utility ---
+        let toastTimeout;
+        function showToast(msg) {
+            toastMsg.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3500);
+        }
+
+        // --- Event Listeners ---
+        document.getElementById('save-btn').addEventListener('click', savePoem);
+        document.getElementById('new-btn').addEventListener('click', createNewPoem);
+        document.getElementById('toolkit-search-btn').addEventListener('click', searchToolkit);
+        searchInput.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') searchToolkit();
+        });
+        contentInput.addEventListener('input', updateStats);
+
+        // Boot
+        init();
+    </script>
+</body>
+</html>
