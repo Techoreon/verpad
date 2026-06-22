@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Live HTML Editor</title>
+
+    <!-- CodeMirror CSS for the Advanced Code Editor UI -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/material-darker.min.css">
+
+    <style>
+        :root {
+            --bg-color: #121212;
+            --panel-bg: #1e1e1e;
+            --border-color: #333;
+            --text-color: #f5f5f5;
+            --accent-color: #bb86fc;
+            --accent-hover: #9b59b6;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Top Toolbar Styling */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            background-color: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background-color: #2d2d2d;
+            color: #e0e0e0;
+            border: 1px solid #444;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        button:hover {
+            background-color: #3d3d3d;
+            border-color: #555;
+        }
+
+        button.primary-btn {
+            background-color: var(--accent-color);
+            color: #000;
+            border-color: var(--accent-color);
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+
+        button.primary-btn:hover {
+            background-color: var(--accent-hover);
+            border-color: var(--accent-hover);
+        }
+
+        /* Split Workspace Styling */
+        .workspace {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 60px);
+        }
+
+        .pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            width: 50%;
+        }
+
+        .pane-left {
+            border-right: 1px solid var(--border-color);
+        }
+
+        .pane-header {
+            padding: 8px 16px;
+            background-color: #1a1a1a;
+            color: #888;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* CodeMirror Overrides to fill container */
+        .editor-wrapper {
+            flex: 1;
+            overflow: hidden;
+        }
+        .CodeMirror {
+            height: 100% !important;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 15px;
+        }
+
+        /* Live Visual Preview Styling */
+        .preview-wrapper {
+            flex: 1;
+            background-color: #ffffff;
+            color: #000000;
+            overflow-y: auto;
+        }
+
+        #preview {
+            min-height: 100%;
+            padding: 40px;
+            outline: none;
+            font-family: inherit;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+
+        #preview:empty:before {
+            content: "Click here to start typing directly in the rendered view...";
+            color: #999;
+            font-style: italic;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .workspace {
+                flex-direction: column;
+            }
+            .pane {
+                width: 100%;
+                height: 50%;
+            }
+            .pane-left {
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            .header {
+                flex-direction: column;
+                gap: 12px;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="toolbar">
+            <!-- WYSIWYG Formatting Tools -->
+            <button onclick="formatDoc('bold')" title="Bold"><b>B</b></button>
+            <button onclick="formatDoc('italic')" title="Italic"><i>I</i></button>
+            <button onclick="formatDoc('underline')" title="Underline"><u>U</u></button>
+            <span style="border-right: 1px solid #444; margin: 0 4px;"></span>
+            <button onclick="formatDoc('formatBlock', 'H1')">H1</button>
+            <button onclick="formatDoc('formatBlock', 'H2')">H2</button>
+            <button onclick="formatDoc('formatBlock', 'P')">P</button>
+            <span style="border-right: 1px solid #444; margin: 0 4px;"></span>
+            <button onclick="formatDoc('insertUnorderedList')">Bullet List</button>
+            <button onclick="formatDoc('insertOrderedList')">Number List</button>
+            <button onclick="addLink()">Link</button>
+        </div>
+        
+        <!-- Copy Action Button -->
+        <button class="primary-btn" id="copyBtn" onclick="copyCode()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            Copy Output HTML
+        </button>
+    </div>
+
+    <div class="workspace">
+        <!-- Left Pane: Code Editor -->
+        <div class="pane pane-left">
+            <div class="pane-header">
+                <span>Raw HTML Code</span>
+            </div>
+            <div class="editor-wrapper">
+                <textarea id="code-editor"></textarea>
+            </div>
+        </div>
+
+        <!-- Right Pane: Live Rendered View -->
+        <div class="pane pane-right">
+            <div class="pane-header">
+                <span>Visual Editor (Editable Preview)</span>
+            </div>
+            <div class="preview-wrapper">
+                <div id="preview" contenteditable="true" spellcheck="false"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CodeMirror JS dependencies (Loads from CDN) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/xml/xml.min.js"></script>
+
+    <script>
+        // DOM Elements
+        const codeTextarea = document.getElementById('code-editor');
+        const previewArea = document.getElementById('preview');
+        
+        // Initialize CodeMirror (Provides syntax highlighting and numbers)
+        const editor = CodeMirror.fromTextArea(codeTextarea, {
+            mode: 'xml',
+            theme: 'material-darker',
+            lineNumbers: true,
+            lineWrapping: true,
+            matchBrackets: true
+        });
+
+        // Set Initial Content
+        const defaultContent = `<h1>Advanced Interactive HTML Writer</h1>\n<p>Welcome! You can interact with this page in two distinct ways:</p>\n<ul>\n  <li>Write standard <strong>HTML code</strong> on the left side.</li>\n  <li>Edit the <strong>rendered text</strong> directly on the right side.</li>\n</ul>\n<p>Any edits you make in the rendered view will automatically and instantly update the raw HTML code on the left.</p>\n<p>When you are finished editing, just click the <strong>Copy Output HTML</strong> button at the top!</p>`;
+        
+        editor.setValue(defaultContent);
+        previewArea.innerHTML = defaultContent;
+
+        // Sync Lock flags to prevent infinite loops
+        let isSyncingCode = false;
+        let isSyncingPreview = false;
+
+        // 1. Sync from Code Editor to Rendered Preview
+        editor.on('change', () => {
+            if (isSyncingPreview) return; // Prevent loop if change originated from preview
+            isSyncingCode = true;
+            previewArea.innerHTML = editor.getValue();
+            isSyncingCode = false;
+        });
+
+        // 2. Sync from Rendered Preview to Code Editor
+        function syncPreviewToCode() {
+            if (isSyncingCode) return; // Prevent loop if change originated from code editor
+            isSyncingPreview = true;
+            editor.setValue(previewArea.innerHTML);
+            isSyncingPreview = false;
+        }
+
+        // Listen for typing inside the visual preview
+        previewArea.addEventListener('input', syncPreviewToCode);
+        
+        // Ensure formatting commands or paste events trigger the sync accurately
+        previewArea.addEventListener('keyup', syncPreviewToCode);
+        previewArea.addEventListener('mouseup', syncPreviewToCode);
+
+        // Action Toolbar Commands
+        function formatDoc(cmd, value = null) {
+            previewArea.focus();
+            document.execCommand(cmd, false, value);
+            syncPreviewToCode();
+        }
+
+        // Add Hyperlink Prompt
+        function addLink() {
+            const url = prompt('Enter the link URL (e.g., https://google.com):');
+            if (url) {
+                formatDoc('createLink', url);
+            }
+        }
+
+        // Copy HTML to Clipboard Function
+        function copyCode() {
+            const finalHTML = editor.getValue();
+            
+            navigator.clipboard.writeText(finalHTML).then(() => {
+                const copyBtn = document.getElementById('copyBtn');
+                const originalHTML = copyBtn.innerHTML;
+                
+                // Visual feedback: Change to green button
+                copyBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied Successfully!`;
+                copyBtn.style.backgroundColor = '#4caf50';
+                copyBtn.style.borderColor = '#4caf50';
+                copyBtn.style.color = '#fff';
+                
+                // Revert visual state after 2 seconds
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalHTML;
+                    copyBtn.style.backgroundColor = '';
+                    copyBtn.style.borderColor = '';
+                    copyBtn.style.color = '';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                alert("Failed to copy. Your browser might not support clipboard access.");
+            });
+        }
+    </script>
+</body>
+</html>
