@@ -37,6 +37,21 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font); }
         body { background: var(--bg); color: var(--text); min-height: 100vh; }
 
+        /* Toast notifications */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        .toast-msg {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            color: #fff; padding: 12px 24px; border-radius: 8px; font-size: 13px;
+            font-weight: 600; z-index: 10000; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            animation: fadeInUp 0.3s ease;
+            pointer-events: none;
+        }
+        .toast-success { background: var(--success); }
+        .toast-error { background: var(--danger); }
+
         /* Layout */
         .app { max-width: 1200px; margin: 0 auto; padding: 30px 20px; }
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 15px; }
@@ -233,6 +248,15 @@
             margin-bottom: 4px;
         }
 
+        /* Export menu */
+        .export-menu-item {
+            padding: 8px 14px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.15s;
+        }
+        .export-menu-item:hover { background: var(--surface-hover); }
+
         /* Print / PDF */
         @media print {
             .no-print { display: none !important; }
@@ -259,16 +283,14 @@
         </div>
         <div class="row-btns no-print">
             <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">🌓</button>
-            <button class="btn btn-secondary" onclick="shareURL()">🔗 Share</button>
+            <button class="btn btn-secondary" onclick="shareURL()" id="share-btn">🔗 Share</button>
             <div style="position:relative;">
-                <button class="btn btn-secondary" onclick="document.getElementById('export-menu').classList.toggle('hidden')">⬇ Export</button>
-                <div id="export-menu" class="hidden" style="position:absolute;right:0;top:110%;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow);z-index:100;min-width:140px;">
-                    <div style="padding:6px 0;">
-                        <div onclick="downloadPNG()" style="padding:8px 14px;cursor:pointer;font-size:13px;" onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background='transparent'">📊 PNG Image</div>
-                        <div onclick="downloadCSV()" style="padding:8px 14px;cursor:pointer;font-size:13px;" onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background='transparent'">📄 CSV Data</div>
-                        <div onclick="downloadJSON()" style="padding:8px 14px;cursor:pointer;font-size:13px;" onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background='transparent'">🗂 JSON Data</div>
-                        <div onclick="downloadPDF()" style="padding:8px 14px;cursor:pointer;font-size:13px;" onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background='transparent'">🖨 PDF Report</div>
-                    </div>
+                <button class="btn btn-secondary" onclick="toggleExportMenu()" id="export-btn">⬇ Export</button>
+                <div id="export-menu" class="hidden" style="position:absolute;right:0;top:110%;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow);z-index:100;min-width:160px;overflow:hidden;">
+                    <div class="export-menu-item" onclick="downloadPNG()">📊 PNG Image</div>
+                    <div class="export-menu-item" onclick="downloadCSV()">📄 CSV Data</div>
+                    <div class="export-menu-item" onclick="downloadJSON()">🗂 JSON Data</div>
+                    <div class="export-menu-item" onclick="downloadPDF()">🖨 PDF Report</div>
                 </div>
             </div>
         </div>
@@ -452,7 +474,7 @@ const THEME_KEY = 'sotech_theme';
 
 // ==================== STATE ====================
 let chartInstance = null, raceChartInstance = null;
-let rawData = {}; // { tag: { periods: [], values: [] } }
+let rawData = {};
 let totalQuestionsByPeriod = {};
 let processedData = {};
 let currentTags = [];
@@ -460,6 +482,24 @@ let currentPeriods = [];
 let raceInterval = null;
 let raceIndex = 0;
 let isGenerating = false;
+
+// ==================== TOAST SYSTEM ====================
+function showToast(msg, type = 'success') {
+    const existing = document.querySelector('.toast-msg');
+    if (existing) existing.remove();
+    
+    const toast = document.createElement('div');
+    toast.className = `toast-msg toast-${type}`;
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(10px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 2500);
+}
 
 // ==================== INIT ====================
 function init() {
@@ -515,7 +555,7 @@ function setCache(cache) {
 function clearCache() {
     if (confirm('Clear all cached API data?')) {
         localStorage.removeItem(CACHE_KEY);
-        alert('Cache cleared.');
+        showToast('Cache cleared!', 'success');
     }
 }
 
@@ -576,16 +616,16 @@ async function generateData() {
     if (isGenerating) return;
     const input = document.getElementById('tags-input').value;
     const tags = [...new Set(input.split(',').map(t => t.trim().toLowerCase()).filter(t => t))];
-    if (!tags.length) return alert('Enter at least one tag.');
-    if (tags.length > 6) return alert('Max 6 tags to respect API limits.');
+    if (!tags.length) return showToast('Enter at least one tag.', 'error');
+    if (tags.length > 6) return showToast('Max 6 tags to respect API limits.', 'error');
 
     const resolution = document.getElementById('resolution-select').value;
     const startYear = parseInt(document.getElementById('start-year').value);
     const endYear = parseInt(document.getElementById('end-year').value);
-    if (startYear >= endYear) return alert('Start year must be before end year.');
+    if (startYear >= endYear) return showToast('Start year must be before end year.', 'error');
 
     const periods = getPeriods(startYear, endYear, resolution);
-    const totalRequests = tags.length * periods.length + periods.length; // +1 for totals
+    const totalRequests = tags.length * periods.length + periods.length;
     
     if (resolution === 'month' && totalRequests > 300) {
         if (!confirm(`Monthly mode requires ~${totalRequests} API requests. You have a 300/day limit. Continue?`)) return;
@@ -603,7 +643,6 @@ async function generateData() {
     currentPeriods = periods;
 
     try {
-        // Fetch totals (all questions) for normalization
         const totalRequestsArr = periods.map(p => ({
             key: p.label,
             url: `${API_BASE}/questions?site=stackoverflow&fromdate=${p.start}&todate=${p.end}&filter=total`
@@ -617,7 +656,6 @@ async function generateData() {
         });
         totalResults.forEach(r => totalQuestionsByPeriod[r.key] = r.count);
 
-        // Fetch tag data
         let completed = totalRequestsArr.length;
         for (const tag of tags) {
             rawData[tag] = { periods: [], values: [] };
@@ -651,9 +689,10 @@ async function generateData() {
         setCache(cache);
         processData();
         renderAll();
+        showToast('Data loaded successfully!');
 
     } catch (err) {
-        alert('API Error: ' + err.message);
+        showToast('API Error: ' + err.message, 'error');
         console.error(err);
     } finally {
         isGenerating = false;
@@ -677,9 +716,9 @@ async function loadTopTags() {
         const data = await apiFetch(`${API_BASE}/tags?order=desc&sort=popular&pagesize=10&site=stackoverflow`);
         const tags = data.items.map(t => t.name).join(', ');
         document.getElementById('tags-input').value = tags;
-        alert('Top 10 tags loaded. Click Generate to fetch their history.');
+        showToast('Top 10 tags loaded. Click Generate to fetch history.');
     } catch (err) {
-        alert('Failed to load top tags: ' + err.message);
+        showToast('Failed to load top tags: ' + err.message, 'error');
     } finally {
         btn.disabled = false;
     }
@@ -695,7 +734,6 @@ function processData() {
         let values = [...rawData[tag].values];
         const periods = rawData[tag].periods;
 
-        // Normalization
         if (mode === 'percent') {
             values = values.map((v, i) => {
                 const total = totalQuestionsByPeriod[Object.keys(totalQuestionsByPeriod)[i]] || 1;
@@ -708,7 +746,6 @@ function processData() {
             values = values.map((v, i) => i === 0 ? 0 : ((v - values[i-1]) / Math.max(values[i-1], 1)) * 100);
         }
 
-        // Moving average
         if (ma > 0) {
             values = values.map((v, i, arr) => {
                 if (i < ma - 1) return v;
@@ -718,9 +755,7 @@ function processData() {
             });
         }
 
-        // Forecasting (linear regression on last 5 points, project 3 forward)
         const forecast = forecastLinear(values, 3);
-        
         processedData[tag] = { periods, values, forecast };
     }
 }
@@ -837,9 +872,6 @@ function renderChart() {
                     borderColor: getComputedStyle(document.body).getPropertyValue('--border').trim(),
                     borderWidth: 1,
                     padding: 12
-                },
-                annotation: {
-                    annotations: generateAnnotations()
                 }
             },
             scales: {
@@ -885,11 +917,6 @@ function renderChart() {
             }
         }]
     });
-}
-
-function generateAnnotations() {
-    // Chart.js annotation plugin not loaded, using custom plugin above
-    return {};
 }
 
 function showLegendStats(tag) {
@@ -991,21 +1018,17 @@ function renderHealth() {
         const firstYear = firstIdx >= 0 ? parseInt(periods[firstIdx]) : 2025;
         const age = 2026 - firstYear;
         
-        // Popularity: latest value normalized to 100
         const latest = vals[vals.length - 1] || 0;
         const maxAll = Math.max(...currentTags.map(t => Math.max(...rawData[t].values)));
         const popularity = Math.min(100, Math.round((latest / maxAll) * 100));
         
-        // Momentum: slope of last 3 points
         const recent = vals.slice(-3);
         const momentum = Math.min(100, Math.max(0, Math.round(((recent[2] - recent[0]) / Math.max(recent[0], 1)) * 50 + 50)));
         
-        // Consistency: inverse coefficient of variation
         const mean = vals.reduce((a,b)=>a+b,0) / vals.length;
         const std = Math.sqrt(vals.reduce((sum,v)=>sum+(v-mean)**2,0) / vals.length);
         const consistency = Math.min(100, Math.max(0, Math.round(100 - (std / Math.max(mean,1)) * 30)));
         
-        // Longevity
         const longevity = Math.min(100, age * 8);
         
         const card = document.createElement('div');
@@ -1076,7 +1099,6 @@ function renderMilestones() {
     const list = document.getElementById('milestones-list');
     const milestones = [];
     
-    // Crossovers
     for (let i = 0; i < currentTags.length; i++) {
         for (let j = i + 1; j < currentTags.length; j++) {
             const t1 = currentTags[i], t2 = currentTags[j];
@@ -1092,7 +1114,6 @@ function renderMilestones() {
         }
     }
     
-    // Peaks
     currentTags.forEach(tag => {
         const stats = computeTagStats(tag);
         milestones.push({ year: stats.peakYear, text: `● ${tag} peaked at ${fmt(stats.peakValue)}`, type: 'peak' });
@@ -1253,75 +1274,172 @@ function fmt(n) {
     return n;
 }
 
-// ==================== EXPORT ====================
+// ==================== FIXED SHARE & EXPORT ====================
+function toggleExportMenu() {
+    document.getElementById('export-menu').classList.toggle('hidden');
+}
+
+function closeExportMenu() {
+    document.getElementById('export-menu').classList.add('hidden');
+}
+
+async function shareURL() {
+    try {
+        updateURL();
+        const url = window.location.href;
+        
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(url);
+            showToast('🔗 URL copied to clipboard!');
+        } else {
+            // Fallback for older browsers / non-HTTPS
+            const ta = document.createElement('textarea');
+            ta.value = url;
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            const success = document.execCommand('copy');
+            document.body.removeChild(ta);
+            if (success) showToast('🔗 URL copied to clipboard!');
+            else showToast('Could not copy URL automatically.', 'error');
+        }
+    } catch (err) {
+        console.error('Share failed:', err);
+        showToast('Failed to copy URL. See console for details.', 'error');
+    }
+}
+
 function downloadPNG() {
-    const canvas = document.getElementById('mainChart');
-    const link = document.createElement('a');
-    link.download = `so-trends-${currentTags.join('-')}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+    try {
+        closeExportMenu();
+        const canvas = document.getElementById('mainChart');
+        if (!canvas) return showToast('No chart available to export.', 'error');
+        
+        // Create a temporary canvas with background color so it's not transparent
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        const tCtx = tempCanvas.getContext('2d');
+        
+        // Fill background based on theme
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        tCtx.fillStyle = isDark ? '#0d1117' : '#f6f8fa';
+        tCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+        tCtx.drawImage(canvas, 0, 0);
+        
+        const tags = currentTags.length ? currentTags.join('-') : 'chart';
+        const link = document.createElement('a');
+        link.download = `so-trends-${tags}.png`;
+        link.href = tempCanvas.toDataURL('image/png');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast('📊 PNG downloaded!');
+    } catch (err) {
+        console.error('PNG export failed:', err);
+        showToast('PNG export failed. See console.', 'error');
+    }
 }
 
 function downloadCSV() {
-    let csv = 'Period,' + currentTags.join(',') + '\n';
-    const len = rawData[currentTags[0]].periods.length;
-    for (let i = 0; i < len; i++) {
-        csv += rawData[currentTags[0]].periods[i] + ',';
-        csv += currentTags.map(t => rawData[t].values[i]).join(',') + '\n';
+    try {
+        closeExportMenu();
+        if (!currentTags.length) return showToast('No data to export. Generate a chart first.', 'error');
+        
+        let csv = 'Period,' + currentTags.join(',') + '\n';
+        const len = rawData[currentTags[0]].periods.length;
+        for (let i = 0; i < len; i++) {
+            csv += rawData[currentTags[0]].periods[i] + ',';
+            csv += currentTags.map(t => rawData[t].values[i]).join(',') + '\n';
+        }
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = `so-trends-${currentTags.join('-')}.csv`;
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        showToast('📄 CSV downloaded!');
+    } catch (err) {
+        console.error('CSV export failed:', err);
+        showToast('CSV export failed. See console.', 'error');
     }
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.download = `so-trends-${currentTags.join('-')}.csv`;
-    link.href = url;
-    link.click();
-    URL.revokeObjectURL(url);
 }
 
 function downloadJSON() {
-    const payload = {
-        tags: currentTags,
-        periods: currentPeriods,
-        rawData,
-        processedData,
-        generated: new Date().toISOString()
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.download = `so-trends-${currentTags.join('-')}.json`;
-    link.href = url;
-    link.click();
-    URL.revokeObjectURL(url);
+    try {
+        closeExportMenu();
+        if (!currentTags.length) return showToast('No data to export. Generate a chart first.', 'error');
+        
+        const payload = {
+            tags: currentTags,
+            periods: currentPeriods,
+            rawData,
+            processedData,
+            generated: new Date().toISOString()
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = `so-trends-${currentTags.join('-')}.json`;
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        showToast('🗂 JSON downloaded!');
+    } catch (err) {
+        console.error('JSON export failed:', err);
+        showToast('JSON export failed. See console.', 'error');
+    }
 }
 
 function downloadPDF() {
-    const report = document.getElementById('print-report');
-    report.style.display = 'block';
-    report.innerHTML = `
-        <h1>Stack Overflow Tech Trends Report</h1>
-        <p>Generated: ${new Date().toLocaleString()}</p>
-        <p>Tags: ${currentTags.join(', ')}</p>
-        <hr>
-        <h2>Statistics</h2>
-        <div id="print-stats"></div>
-        <h2>Correlation Matrix</h2>
-        <div id="print-corr"></div>
-    `;
-    // Clone stats and correlation
-    const statsClone = document.getElementById('stats-grid').cloneNode(true);
-    const corrClone = document.getElementById('corr-table').cloneNode(true);
-    report.querySelector('#print-stats').appendChild(statsClone);
-    report.querySelector('#print-corr').appendChild(corrClone);
-    
-    window.print();
-    report.style.display = 'none';
+    try {
+        closeExportMenu();
+        const report = document.getElementById('print-report');
+        report.style.display = 'block';
+        report.innerHTML = `
+            <div style="padding:40px;font-family:Inter,sans-serif;">
+                <h1 style="font-size:28px;margin-bottom:10px;">Stack Overflow Tech Trends Report</h1>
+                <p style="color:#666;">Generated: ${new Date().toLocaleString()}</p>
+                <p style="color:#666;">Tags: ${currentTags.join(', ') || 'None'}</p>
+                <hr style="margin:20px 0;">
+                <h2>Statistics</h2>
+                <div id="print-stats"></div>
+                <h2>Correlation Matrix</h2>
+                <div id="print-corr"></div>
+            </div>
+        `;
+        const statsGrid = document.getElementById('stats-grid');
+        const corrTable = document.getElementById('corr-table');
+        if (statsGrid) {
+            const clone = statsGrid.cloneNode(true);
+            report.querySelector('#print-stats').appendChild(clone);
+        }
+        if (corrTable) {
+            const clone = corrTable.cloneNode(true);
+            report.querySelector('#print-corr').appendChild(clone);
+        }
+        window.print();
+        report.style.display = 'none';
+        showToast('🖨 Print dialog opened!');
+    } catch (err) {
+        console.error('PDF export failed:', err);
+        showToast('PDF export failed. See console.', 'error');
+    }
 }
 
 // ==================== URL SHARING ====================
 function updateURL() {
+    const input = document.getElementById('tags-input').value;
+    const tags = currentTags.length ? currentTags : input.split(',').map(t => t.trim()).filter(t => t);
     const params = new URLSearchParams();
-    params.set('tags', currentTags.join(','));
+    params.set('tags', tags.join(','));
     params.set('resolution', document.getElementById('resolution-select').value);
     params.set('normalize', document.getElementById('normalize-select').value);
     params.set('ma', document.getElementById('ma-select').value);
@@ -1340,18 +1458,12 @@ function parseURLParams() {
     if (params.has('end')) document.getElementById('end-year').value = params.get('end');
 }
 
-function shareURL() {
-    updateURL();
-    navigator.clipboard.writeText(window.location.href);
-    alert('URL copied to clipboard!');
-}
-
 // Close dropdowns on click outside
 document.addEventListener('click', (e) => {
     if (!e.target.closest('.autocomplete-wrap')) {
         document.getElementById('autocomplete-dropdown').style.display = 'none';
     }
-    if (!e.target.closest('#export-menu') && !e.target.closest('.btn-secondary')) {
+    if (!e.target.closest('#export-menu') && !e.target.closest('#export-btn')) {
         document.getElementById('export-menu').classList.add('hidden');
     }
 });
