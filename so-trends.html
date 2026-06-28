@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stack Overflow Tech Trends (Live Data)</title>
+    
+    <!-- Chart.js for rendering the trend graph -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --panel-bg: #161b22;
+            --border-color: #30363d;
+            --text-main: #c9d1d9;
+            --text-muted: #8b949e;
+            --accent: #58a6ff;
+            --accent-hover: #3182ce;
+            --danger: #f85149;
+            --font-main: 'Inter', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font-main); }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .header { text-align: center; margin-bottom: 10px; }
+        .header h1 { font-size: 28px; font-weight: 800; color: #fff; margin-bottom: 8px; }
+        .header p { color: var(--text-muted); font-size: 14px; }
+
+        .control-panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .input-row { display: flex; gap: 15px; }
+        
+        input {
+            flex-grow: 1;
+            background: #010409;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 12px 15px;
+            border-radius: 8px;
+            font-size: 15px;
+            outline: none;
+            transition: 0.2s;
+        }
+        input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2); }
+
+        button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+        button:hover:not(:disabled) { background: var(--accent-hover); color: #fff; }
+        button:disabled { background: #30363d; color: #8b949e; cursor: not-allowed; }
+
+        /* Progress & Status */
+        .status-container { display: none; flex-direction: column; gap: 10px; }
+        .progress-bar-bg { width: 100%; height: 8px; background: #010409; border-radius: 4px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.2s; }
+        .status-text { font-size: 13px; color: var(--text-muted); display: flex; justify-content: space-between; }
+
+        .chart-container {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            height: 500px;
+            position: relative;
+        }
+
+        .footer-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 10px;
+            padding: 0 10px;
+        }
+        .quota-warning { color: var(--danger); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>Stack Overflow Tech Trends</h1>
+            <p>Live API querying of 15+ years of historical question data. Compare up to 4 frameworks.</p>
+        </div>
+
+        <div class="control-panel">
+            <div class="input-row">
+                <input type="text" id="tags-input" placeholder="Enter SO tags separated by commas (e.g. jquery, reactjs, vue.js)" value="jquery, reactjs, vue.js">
+                <button id="generate-btn" onclick="generateGraph()">Generate Graph</button>
+            </div>
+            
+            <div class="status-container" id="status-container">
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="progress-bar"></div>
+                </div>
+                <div class="status-text">
+                    <span id="status-msg">Initializing API requests...</span>
+                    <span id="progress-text">0 / 0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="trendChart"></canvas>
+        </div>
+
+        <div class="footer-info">
+            <span>Data source: Live Stack Exchange API (v2.3)</span>
+            <span id="quota-info">API Quota: Checking...</span>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const START_YEAR = 2009; // StackOverflow was created late 2008
+        const END_YEAR = 2025;   // Last full complete year
+        const YEARS = Array.from({length: END_YEAR - START_YEAR + 1}, (_, i) => START_YEAR + i);
+        
+        // Colors for chart lines
+        const COLORS = ['#58a6ff', '#f85149', '#3fb950', '#d2a8ff', '#e3b341'];
+        
+        // Memory Cache to save API requests if user re-generates same tags
+        const cache = {}; 
+        
+        let chartInstance = null;
+
+        // Create Unix timestamps for Jan 1st of every year
+        function getYearUnixBounds(year) {
+            const start = Math.floor(new Date(`${year}-01-01T00:00:00Z`).getTime() / 1000);
+            const end = Math.floor(new Date(`${year+1}-01-01T00:00:00Z`).getTime() / 1000);
+            return { start, end };
+        }
+
+        // Utility: sleep for throttling API requests
+        const delay = ms => new Promise(res => setTimeout(res, ms));
+
+        async function fetchTagCountForYear(tag, year) {
+            const cacheKey = `${tag}-${year}`;
+            if (cache[cacheKey] !== undefined) {
+                return { count: cache[cacheKey], quota: null, cached: true };
+            }
+
+            const { start, end } = getYearUnixBounds(year);
+            const url = `https://api.stackexchange.com/2.3/questions?site=stackoverflow&tagged=${encodeURIComponent(tag)}&fromdate=${start}&todate=${end}&filter=total`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.error_id) {
+                    throw new Error(data.error_message);
+                }
+
+                const count = data.total || 0;
+                cache[cacheKey] = count; // Save to cache
+
+                // Respect API Backoff if requested by StackOverflow
+                if (data.backoff) {
+                    await delay(data.backoff * 1000);
+                } else {
+                    await delay(50); // Standard flat throttle to prevent IP bursting
+                }
+
+                return { count, quota: data.quota_remaining, cached: false };
+
+            } catch (err) {
+                console.error(`Failed fetching ${tag} for ${year}:`, err);
+                throw err;
+            }
+        }
+
+        async function generateGraph() {
+            const input = document.getElementById('tags-input').value;
+            const tags = input.split(',').map(t => t.trim().toLowerCase()).filter(t => t);
+            
+            if (tags.length === 0) {
+                alert("Please enter at least one tag.");
+                return;
+            }
+            if (tags.length > 4) {
+                alert("To respect StackOverflow's public API limits, please query a maximum of 4 tags at a time.");
+                return;
+            }
+
+            // UI Setup
+            const btn = document.getElementById('generate-btn');
+            const statusContainer = document.getElementById('status-container');
+            const statusMsg = document.getElementById('status-msg');
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            const quotaInfo = document.getElementById('quota-info');
+
+            btn.disabled = true;
+            statusContainer.style.display = 'flex';
+            
+            const totalRequests = tags.length * YEARS.length;
+            let completedRequests = 0;
+            
+            const chartDatasets = [];
+
+            try {
+                for (let i = 0; i < tags.length; i++) {
+                    const tag = tags[i];
+                    const dataPoints = [];
+                    
+                    for (let year of YEARS) {
+                        statusMsg.innerText = `Querying StackOverflow: '${tag}' in ${year}...`;
+                        
+                        const result = await fetchTagCountForYear(tag, year);
+                        dataPoints.push(result.count);
+                        
+                        completedRequests++;
+                        const percent = Math.round((completedRequests / totalRequests) * 100);
+                        progressBar.style.width = `${percent}%`;
+                        progressText.innerText = `${completedRequests} / ${totalRequests}`;
+                        
+                        if (result.quota !== null) {
+                            quotaInfo.innerText = `API Quota Remaining: ${result.quota}`;
+                            if (result.quota < 20) quotaInfo.className = 'quota-warning';
+                        }
+                    }
+
+                    chartDatasets.push({
+                        label: tag,
+                        data: dataPoints,
+                        borderColor: COLORS[i % COLORS.length],
+                        backgroundColor: COLORS[i % COLORS.length] + '22',
+                        borderWidth: 3,
+                        pointRadius: 4,
+                        pointBackgroundColor: COLORS[i % COLORS.length],
+                        fill: true,
+                        tension: 0.4 // Smooth curves
+                    });
+                }
+
+                statusMsg.innerText = "Data gathered! Rendering chart...";
+                renderChart(chartDatasets);
+
+            } catch (error) {
+                alert(`API Error: ${error.message}\n\nYou may have hit the StackOverflow rate limit (300 requests/day for unauthenticated IPs). Try again tomorrow or use fewer tags.`);
+            } finally {
+                btn.disabled = false;
+                setTimeout(() => { statusContainer.style.display = 'none'; progressBar.style.width = '0%'; }, 2000);
+            }
+        }
+
+        function renderChart(datasets) {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            
+            // Destroy existing chart to prevent hover overlap glitches
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            Chart.defaults.color = '#8b949e';
+            Chart.defaults.font.family = "'Inter', sans-serif";
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: YEARS,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { color: '#c9d1d9', font: { size: 14, weight: '600' }, padding: 20 }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(22, 27, 34, 0.9)',
+                            titleColor: '#fff',
+                            bodyColor: '#c9d1d9',
+                            borderColor: '#30363d',
+                            borderWidth: 1,
+                            padding: 12,
+                            boxPadding: 6,
+                            usePointStyle: true
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: '#30363d', drawBorder: false }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#30363d', drawBorder: false },
+                            title: {
+                                display: true,
+                                text: 'Questions Asked Per Year',
+                                color: '#8b949e',
+                                font: { size: 13 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Initialize an empty chart on load
+        renderChart([]);
+    </script>
+</body>
+</html>
