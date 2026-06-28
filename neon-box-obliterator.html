@@ -1,0 +1,379 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transparent Box Obliterator</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #0a0a1f; /* Dark blueish-black background */
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden; /* Prevent scrollbars from screen shake */
+            cursor: crosshair;
+        }
+
+        #gameCanvas {
+            border: 1px solid #333; /* Even more subtle border */
+            background-color: #101028;
+            /* Removed canvas box-shadow for a cleaner look with transparent boxes */
+        }
+
+        .controls {
+            margin-top: 15px;
+            padding: 10px 15px;
+            background-color: rgba(30, 30, 50, 0.85);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        }
+
+        .controls label {
+            margin-right: 10px;
+            font-size: 0.9em;
+        }
+        .controls button {
+            background-color: #5D3FD3; /* Slightly less intense Purple */
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+            font-size: 0.9em;
+        }
+        .controls button:hover {
+            background-color: #7A5DC7;
+        }
+
+        /* Class for screen shake */
+        .shake {
+            animation: shake 0.12s cubic-bezier(.36,.07,.19,.97) both; /* Slightly faster shake */
+            transform: translate3d(0, 0, 0);
+            backface-visibility: hidden;
+            perspective: 1000px;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-2.5px, 0, 0); } /* Reduced intensity slightly */
+            40%, 60% { transform: translate3d(2.5px, 0, 0); }
+            15%, 85% { transform: translate3d(0, -0.5px, 0); } /* Reduced vertical shake */
+            25%, 75% { transform: translate3d(0, 0.5px, 0); }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+    <div class="controls">
+        <label for="score">Score: <span id="scoreValue">0</span></label>
+        <button id="resetButton">Reset Game</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreValueSpan = document.getElementById('scoreValue');
+        const resetButton = document.getElementById('resetButton');
+
+        let canvasWidth = Math.min(window.innerWidth * 0.95, 900); // Slightly larger canvas allowance
+        let canvasHeight = Math.min(window.innerHeight * 0.75, 650);
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+
+        let score = 0;
+        let boxes = [];
+        const numInitialBoxes = 20; // Start with more boxes
+        const maxBoxes = 40; // Allow more boxes on screen
+        const baseBoxSpawnInterval = 1000; // Base interval in ms
+        const minBoxSpawnInterval = 200;  // Minimum interval when few boxes are present
+        let lastSpawnTime = 0;
+
+        // Neon Colors (will be used with transparency)
+        const neonColors = [
+            '#39FF14', '#FF073A', '#00FFFF', '#FF00FF',
+            '#FFFF00', '#FF6EFF', '#7FFF00', '#00FF7F',
+            '#FF7F50', // Coral
+            '#40E0D0'  // Turquoise
+        ];
+        const boxTransparency = 0.65; // 0.0 (fully transparent) to 1.0 (fully opaque)
+        const particleTransparency = 0.8;
+
+        // Selection rectangle
+        let isSelecting = false;
+        let selectionRect = {
+            x: 0, y: 0, width: 0, height: 0,
+            startX: 0, startY: 0
+        };
+
+        // Particle system
+        let particles = [];
+
+        // Helper to convert hex color and alpha to rgba
+        function hexToRgba(hex, alpha) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        class Box {
+            constructor(x, y, width, height, color, dx, dy) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.baseColor = color; // Store the base hex color
+                this.drawColor = hexToRgba(color, boxTransparency);
+                this.dx = dx;
+                this.dy = dy;
+                this.alive = true;
+            }
+
+            draw() {
+                if (!this.alive) return;
+                ctx.fillStyle = this.drawColor;
+                // No shadow for a less "glowy", more "glassy" look
+                // ctx.shadowColor = this.baseColor;
+                // ctx.shadowBlur = 5; // Reduced glow
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+
+                // Optional: Add a thin, slightly brighter border for definition
+                ctx.strokeStyle = hexToRgba(this.baseColor, boxTransparency + 0.2); // Slightly more opaque border
+                ctx.lineWidth = 1.5;
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
+                // ctx.shadowBlur = 0;
+            }
+
+            update() {
+                if (!this.alive) return;
+                this.x += this.dx;
+                this.y += this.dy;
+
+                if (this.x + this.width > canvas.width || this.x < 0) {
+                    this.dx *= -1;
+                    this.x = Math.max(0, Math.min(this.x, canvas.width - this.width));
+                }
+                if (this.y + this.height > canvas.height || this.y < 0) {
+                    this.dy *= -1;
+                    this.y = Math.max(0, Math.min(this.y, canvas.height - this.height));
+                }
+            }
+
+            isInSelection(rect) {
+                const boxRect = { x: this.x, y: this.y, width: this.width, height: this.height };
+                const selX = rect.width < 0 ? rect.x + rect.width : rect.x;
+                const selY = rect.height < 0 ? rect.y + rect.height : rect.y;
+                const selWidth = Math.abs(rect.width);
+                const selHeight = Math.abs(rect.height);
+
+                return boxRect.x < selX + selWidth &&
+                       boxRect.x + boxRect.width > selX &&
+                       boxRect.y < selY + selHeight &&
+                       boxRect.y + boxRect.height > selY;
+            }
+        }
+
+        class Particle {
+            constructor(x, y, baseColor) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 4 + 1.5; // Smaller particles
+                this.baseColor = baseColor;
+                this.drawColor = hexToRgba(baseColor, particleTransparency);
+                this.dx = (Math.random() - 0.5) * (Math.random() * 5 + 1.5); // Slightly less explosive
+                this.dy = (Math.random() - 0.5) * (Math.random() * 5 + 1.5);
+                this.life = 40 + Math.random() * 40; // Shorter life
+                this.initialLife = this.life;
+            }
+
+            draw() {
+                const currentAlpha = particleTransparency * (this.life / this.initialLife);
+                ctx.fillStyle = hexToRgba(this.baseColor, currentAlpha);
+                // No shadow for particles for consistency
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            update() {
+                this.x += this.dx;
+                this.y += this.dy;
+                this.life -= 1;
+                this.dx *= 0.97;
+                this.dy *= 0.97;
+            }
+        }
+
+        function createBox() {
+            const size = Math.random() * 25 + 15; // Slightly smaller boxes on average
+            const isRect = Math.random() > 0.4;
+            const width = size;
+            const height = isRect ? size * (Math.random() * 0.6 + 0.7) : size;
+            
+            const x = Math.random() * (canvas.width - width);
+            const y = Math.random() * (canvas.height - height);
+            const color = neonColors[Math.floor(Math.random() * neonColors.length)];
+            const speed = 0.8 + Math.random() * 1.5; // Slightly slower average speed
+            const angle = Math.random() * Math.PI * 2;
+            const dx = Math.cos(angle) * speed;
+            const dy = Math.sin(angle) * speed;
+
+            return new Box(x, y, width, height, color, dx, dy);
+        }
+
+        function initBoxes() {
+            boxes = [];
+            particles = [];
+            score = 0;
+            updateScoreDisplay();
+            for (let i = 0; i < numInitialBoxes; i++) {
+                boxes.push(createBox());
+            }
+            lastSpawnTime = performance.now();
+        }
+
+        function spawnNewBoxes(timestamp) {
+            // Dynamic spawn interval: faster if fewer boxes
+            const boxDeficit = maxBoxes - boxes.length;
+            let currentSpawnInterval = baseBoxSpawnInterval;
+            if (boxDeficit > 0) {
+                // Scale interval down as deficit increases, but not below minBoxSpawnInterval
+                const deficitRatio = Math.max(0, (maxBoxes / 2 - boxes.length) / (maxBoxes / 2)); // Ratio of how empty it is (0 to 1)
+                currentSpawnInterval = baseBoxSpawnInterval - (baseBoxSpawnInterval - minBoxSpawnInterval) * deficitRatio;
+                currentSpawnInterval = Math.max(minBoxSpawnInterval, currentSpawnInterval);
+            }
+
+
+            if (timestamp - lastSpawnTime > currentSpawnInterval && boxes.length < maxBoxes) {
+                boxes.push(createBox());
+                lastSpawnTime = timestamp;
+            }
+        }
+
+        function drawSelectionRect() {
+            if (!isSelecting) return;
+            ctx.strokeStyle = 'rgba(200, 200, 255, 0.6)'; // Light lavender selection
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 4]);
+            ctx.strokeRect(selectionRect.startX, selectionRect.startY, selectionRect.width, selectionRect.height);
+            ctx.fillStyle = 'rgba(200, 200, 255, 0.1)'; // Very faint fill
+            ctx.fillRect(selectionRect.startX, selectionRect.startY, selectionRect.width, selectionRect.height);
+            ctx.setLineDash([]);
+            ctx.lineWidth = 1;
+        }
+
+        function createParticles(x, y, baseColor, count = 12) { // Fewer particles
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y, baseColor));
+            }
+        }
+
+        function handleSelection() {
+            let killedCount = 0;
+            boxes.forEach(box => {
+                if (box.alive && box.isInSelection(selectionRect)) {
+                    box.alive = false;
+                    score += 10;
+                    killedCount++;
+                    createParticles(box.x + box.width / 2, box.y + box.height / 2, box.baseColor);
+                }
+            });
+
+            if (killedCount > 0) {
+                triggerScreenShake();
+                updateScoreDisplay();
+            }
+            boxes = boxes.filter(box => box.alive);
+        }
+
+        function triggerScreenShake() {
+            document.body.classList.add('shake');
+            setTimeout(() => {
+                document.body.classList.remove('shake');
+            }, 120); // Match CSS animation duration
+        }
+        
+        function updateScoreDisplay() {
+            scoreValueSpan.textContent = score;
+        }
+
+        function gameLoop(timestamp) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            spawnNewBoxes(timestamp);
+
+            boxes.forEach(box => {
+                box.update();
+                box.draw();
+            });
+
+            particles = particles.filter(p => p.life > 0);
+            particles.forEach(particle => {
+                particle.update();
+                particle.draw();
+            });
+
+            drawSelectionRect();
+            requestAnimationFrame(gameLoop);
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            isSelecting = true;
+            const rect = canvas.getBoundingClientRect();
+            selectionRect.startX = e.clientX - rect.left;
+            selectionRect.startY = e.clientY - rect.top;
+            selectionRect.width = 0;
+            selectionRect.height = 0;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isSelecting) return;
+            const rect = canvas.getBoundingClientRect();
+            selectionRect.x = selectionRect.startX;
+            selectionRect.y = selectionRect.startY;
+            selectionRect.width = (e.clientX - rect.left) - selectionRect.startX;
+            selectionRect.height = (e.clientY - rect.top) - selectionRect.startY;
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (isSelecting) {
+                isSelecting = false;
+                handleSelection();
+                selectionRect.width = 0;
+                selectionRect.height = 0;
+            }
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            if (isSelecting) {
+                isSelecting = false;
+                handleSelection();
+                selectionRect.width = 0;
+                selectionRect.height = 0;
+            }
+        });
+
+        resetButton.addEventListener('click', initBoxes);
+
+        window.addEventListener('resize', () => {
+            canvasWidth = Math.min(window.innerWidth * 0.95, 900);
+            canvasHeight = Math.min(window.innerHeight * 0.75, 650);
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+        });
+
+        initBoxes();
+        requestAnimationFrame(gameLoop);
+
+    </script>
+</body>
+</html>
