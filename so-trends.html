@@ -1,349 +1,1363 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stack Overflow Tech Trends (Live Data)</title>
-    
-    <!-- Chart.js for rendering the trend graph -->
+    <title>Stack Overflow Tech Trends — Advanced Analytics</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #0d1117;
-            --panel-bg: #161b22;
-            --border-color: #30363d;
-            --text-main: #c9d1d9;
+            --bg: #0d1117;
+            --surface: #161b22;
+            --surface-hover: #1f242c;
+            --border: #30363d;
+            --text: #c9d1d9;
             --text-muted: #8b949e;
             --accent: #58a6ff;
-            --accent-hover: #3182ce;
+            --accent-dim: rgba(88,166,255,0.15);
             --danger: #f85149;
-            --font-main: 'Inter', sans-serif;
+            --success: #3fb950;
+            --warning: #e3b341;
+            --font: 'Inter', sans-serif;
+            --shadow: 0 10px 40px rgba(0,0,0,0.6);
+        }
+        [data-theme="light"] {
+            --bg: #f6f8fa;
+            --surface: #ffffff;
+            --surface-hover: #f3f4f6;
+            --border: #d0d7de;
+            --text: #24292f;
+            --text-muted: #57606a;
+            --accent: #0969da;
+            --accent-dim: rgba(9,105,218,0.12);
+            --shadow: 0 10px 40px rgba(0,0,0,0.08);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font-main); }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font); }
+        body { background: var(--bg); color: var(--text); min-height: 100vh; }
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            padding: 40px 20px;
+        /* Layout */
+        .app { max-width: 1200px; margin: 0 auto; padding: 30px 20px; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 15px; }
+        h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+        .subtitle { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+
+        /* Controls */
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
         }
-
-        .container {
-            width: 100%;
-            max-width: 1000px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .header { text-align: center; margin-bottom: 10px; }
-        .header h1 { font-size: 28px; font-weight: 800; color: #fff; margin-bottom: 8px; }
-        .header p { color: var(--text-muted); font-size: 14px; }
-
-        .control-panel {
-            background: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .input-row { display: flex; gap: 15px; }
-        
-        input {
-            flex-grow: 1;
-            background: #010409;
-            border: 1px solid var(--border-color);
-            color: #fff;
-            padding: 12px 15px;
+        .control-group { display: flex; flex-direction: column; gap: 6px; }
+        .control-group label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+        input[type="text"], select {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 10px 12px;
             border-radius: 8px;
-            font-size: 15px;
+            font-size: 14px;
             outline: none;
-            transition: 0.2s;
+            width: 100%;
         }
-        input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2); }
-
-        button {
+        input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+        .btn {
             background: var(--accent);
-            color: #000;
+            color: #fff;
             border: none;
-            padding: 12px 25px;
+            padding: 10px 18px;
             border-radius: 8px;
             font-weight: 600;
-            font-size: 15px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-secondary { background: var(--surface-hover); color: var(--text); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--border); }
+        .btn-danger { background: var(--danger); }
+        .btn-success { background: var(--success); }
+
+        .row-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+        .chip {
+            background: var(--accent-dim);
+            color: var(--accent);
+            border: 1px solid rgba(88,166,255,0.2);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
             cursor: pointer;
             transition: 0.2s;
-            white-space: nowrap;
         }
-        button:hover:not(:disabled) { background: var(--accent-hover); color: #fff; }
-        button:disabled { background: #30363d; color: #8b949e; cursor: not-allowed; }
+        .chip:hover { background: var(--accent); color: #fff; }
 
-        /* Progress & Status */
-        .status-container { display: none; flex-direction: column; gap: 10px; }
-        .progress-bar-bg { width: 100%; height: 8px; background: #010409; border-radius: 4px; overflow: hidden; }
-        .progress-bar-fill { height: 100%; width: 0%; background: var(--accent); transition: width 0.2s; }
-        .status-text { font-size: 13px; color: var(--text-muted); display: flex; justify-content: space-between; }
+        /* Autocomplete */
+        .autocomplete-wrap { position: relative; }
+        .autocomplete-dropdown {
+            position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-top: 4px;
+            max-height: 200px; overflow-y: auto;
+            box-shadow: var(--shadow);
+            display: none;
+        }
+        .autocomplete-item {
+            padding: 8px 12px; cursor: pointer; font-size: 13px;
+            border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .autocomplete-item:last-child { border-bottom: none; }
+        .autocomplete-item:hover { background: var(--surface-hover); }
+        .autocomplete-item small { color: var(--text-muted); font-size: 11px; }
 
-        .chart-container {
-            background: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
+        /* Tabs */
+        .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; overflow-x: auto; }
+        .tab {
+            padding: 10px 18px; cursor: pointer; font-size: 13px; font-weight: 600;
+            color: var(--text-muted); border-bottom: 2px solid transparent;
+            white-space: nowrap; transition: 0.2s;
+        }
+        .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .tab:hover { color: var(--text); }
+
+        /* Panels */
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
             padding: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            height: 500px;
-            position: relative;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+        .panel-title { font-size: 15px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+        /* Chart */
+        .chart-wrap { position: relative; height: 480px; }
+        .chart-overlay {
+            position: absolute; top: 10px; right: 10px;
+            background: rgba(13,17,23,0.9);
+            border: 1px solid var(--border);
+            border-radius: 8px; padding: 10px;
+            font-size: 11px; max-width: 220px;
+            display: none;
+        }
+        [data-theme="light"] .chart-overlay { background: rgba(255,255,255,0.95); }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+        }
+        .stat-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            transition: 0.2s;
+        }
+        .stat-card:hover { border-color: var(--accent); }
+        .stat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .stat-tag { font-weight: 700; font-size: 14px; }
+        .stat-trend { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 12px; }
+        .trend-up { background: rgba(63,185,80,0.15); color: var(--success); }
+        .trend-down { background: rgba(248,81,73,0.15); color: var(--danger); }
+        .trend-flat { background: rgba(227,179,65,0.15); color: var(--warning); }
+        .stat-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px solid var(--border); }
+        .stat-row:last-child { border-bottom: none; }
+        .stat-label { color: var(--text-muted); }
+        .stat-value { font-weight: 600; }
+
+        /* Health Score */
+        .health-bar { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+        .health-label { width: 90px; font-size: 11px; color: var(--text-muted); }
+        .health-track { flex: 1; height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; }
+        .health-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+        .health-score { width: 30px; text-align: right; font-size: 12px; font-weight: 700; }
+
+        /* Correlation */
+        .corr-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .corr-table th, .corr-table td { padding: 10px; text-align: center; border: 1px solid var(--border); }
+        .corr-table th { background: var(--bg); font-weight: 600; }
+        .corr-cell { font-weight: 700; transition: 0.2s; }
+        .corr-cell:hover { transform: scale(1.1); }
+
+        /* Matrix */
+        .matrix-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+
+        /* Progress */
+        .progress-wrap { margin: 12px 0; display: none; }
+        .progress-track { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+        .progress-fill { height: 100%; width: 0%; background: var(--accent); border-radius: 3px; transition: width 0.3s; }
+        .progress-text { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+        /* Rank Race */
+        .race-controls { display: flex; gap: 10px; align-items: center; margin-bottom: 15px; }
+        .race-slider { flex: 1; }
+        .race-canvas { height: 400px; }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            background: var(--surface-hover);
+            border: 1px solid var(--border);
+            color: var(--text);
+            width: 36px; height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px;
         }
 
-        .footer-info {
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-top: 10px;
-            padding: 0 10px;
+        /* Event badges */
+        .event-badge {
+            display: inline-block;
+            background: var(--accent-dim);
+            color: var(--accent);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-right: 4px;
+            margin-bottom: 4px;
         }
-        .quota-warning { color: var(--danger); font-weight: bold; }
+
+        /* Print / PDF */
+        @media print {
+            .no-print { display: none !important; }
+            .panel { break-inside: avoid; page-break-inside: avoid; }
+            body { background: #fff; color: #000; }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <div class="header">
+<div class="app">
+    <header>
+        <div>
             <h1>Stack Overflow Tech Trends</h1>
-            <p>Live API querying of 15+ years of historical question data. Compare up to 4 frameworks.</p>
+            <div class="subtitle">Live API analytics with forecasting, correlation & health scores</div>
         </div>
-
-        <div class="control-panel">
-            <div class="input-row">
-                <input type="text" id="tags-input" placeholder="Enter SO tags separated by commas (e.g. jquery, reactjs, vue.js)" value="jquery, reactjs, vue.js">
-                <button id="generate-btn" onclick="generateGraph()">Generate Graph</button>
-            </div>
-            
-            <div class="status-container" id="status-container">
-                <div class="progress-bar-bg">
-                    <div class="progress-bar-fill" id="progress-bar"></div>
-                </div>
-                <div class="status-text">
-                    <span id="status-msg">Initializing API requests...</span>
-                    <span id="progress-text">0 / 0</span>
+        <div class="row-btns no-print">
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">🌓</button>
+            <button class="btn btn-secondary" onclick="shareURL()">🔗 Share</button>
+            <div style="position:relative;">
+                <button class="btn btn-secondary" onclick="document.getElementById('export-menu').classList.toggle('hidden')">⬇ Export</button>
+                <div id="export-menu" class="hidden" style="position:absolute;right:0;top:110%;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow);z-index:100;min-width:140px;">
+                    <div style="padding:6px 0;">
+                        <div onclick="downloadPNG()" style="padding:8px 14px;cursor:pointer;font-size:13px;" onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background='transparent'">📊 PNG Image</div>
+                        <div onclick="downloadCSV()" style="padding:8px 14px;cursor:pointer;font-size:13px;" onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background='transparent'">📄 CSV Data</div>
+                        <div onclick="downloadJSON()" style="padding:8px 14px;cursor:pointer;font-size:13px;" onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background='transparent'">🗂 JSON Data</div>
+                        <div onclick="downloadPDF()" style="padding:8px 14px;cursor:pointer;font-size:13px;" onmouseover="this.style.background='var(--surface-hover)'" onmouseout="this.style.background='transparent'">🖨 PDF Report</div>
+                    </div>
                 </div>
             </div>
         </div>
+    </header>
 
-        <div class="chart-container">
-            <canvas id="trendChart"></canvas>
+    <!-- Controls -->
+    <div class="control-grid no-print">
+        <div class="control-group" style="grid-column: 1 / -1;">
+            <label>Tags (comma separated)</label>
+            <div class="autocomplete-wrap">
+                <input type="text" id="tags-input" placeholder="e.g. reactjs, vue.js, angular" value="reactjs, vue.js, angular, jquery" oninput="handleInput(event)" onkeydown="handleKeyDown(event)">
+                <div class="autocomplete-dropdown" id="autocomplete-dropdown"></div>
+            </div>
+            <div class="row-btns" style="margin-top:6px;">
+                <span style="font-size:11px;color:var(--text-muted);align-self:center;">Quick:</span>
+                <span class="chip" onclick="setTags('reactjs,vue.js,angular,svelte')">Frontend</span>
+                <span class="chip" onclick="setTags('python,java,javascript,rust,go')">Languages</span>
+                <span class="chip" onclick="setTags('node.js,django,spring,laravel')">Backend</span>
+                <span class="chip" onclick="setTags('mysql,postgresql,mongodb,redis')">Databases</span>
+                <span class="chip" onclick="setTags('aws,docker,kubernetes,azure')">Cloud</span>
+                <span class="chip" onclick="setTags('pytorch,tensorflow,openai,llm')">AI</span>
+            </div>
         </div>
 
-        <div class="footer-info">
-            <span>Data source: Live Stack Exchange API (v2.3)</span>
-            <span id="quota-info">API Quota: Checking...</span>
+        <div class="control-group">
+            <label>Time Resolution</label>
+            <select id="resolution-select" onchange="handleResolutionChange()">
+                <option value="year">Yearly</option>
+                <option value="quarter">Quarterly</option>
+                <option value="month">Monthly</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Normalization</label>
+            <select id="normalize-select">
+                <option value="raw">Raw Questions</option>
+                <option value="percent">% of All SO Questions</option>
+                <option value="indexed">Indexed (First Year = 100)</option>
+                <option value="growth">Year-over-Year Growth %</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Smoothing</label>
+            <select id="ma-select">
+                <option value="0">None</option>
+                <option value="3">3-Period Moving Average</option>
+                <option value="5">5-Period Moving Average</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Date Range</label>
+            <div style="display:flex;gap:8px;">
+                <select id="start-year"></select>
+                <select id="end-year"></select>
+            </div>
+        </div>
+
+        <div class="control-group" style="display:flex;flex-direction:column;justify-content:flex-end;">
+            <div class="row-btns">
+                <button class="btn" onclick="generateData()" id="generate-btn">▶ Generate</button>
+                <button class="btn btn-secondary" onclick="loadTopTags()" id="top-tags-btn">🏆 Top 10</button>
+                <button class="btn btn-danger" onclick="clearCache()" title="Clear local cache">🗑</button>
+            </div>
         </div>
     </div>
 
-    <script>
-        // Configuration
-        const START_YEAR = 2009; // StackOverflow was created late 2008
-        const END_YEAR = 2025;   // Last full complete year
-        const YEARS = Array.from({length: END_YEAR - START_YEAR + 1}, (_, i) => START_YEAR + i);
-        
-        // Colors for chart lines
-        const COLORS = ['#58a6ff', '#f85149', '#3fb950', '#d2a8ff', '#e3b341'];
-        
-        // Memory Cache to save API requests if user re-generates same tags
-        const cache = {}; 
-        
-        let chartInstance = null;
+    <div class="progress-wrap" id="progress-wrap">
+        <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+        <div class="progress-text"><span id="status-msg">Ready</span><span id="progress-pct">0%</span></div>
+    </div>
 
-        // Create Unix timestamps for Jan 1st of every year
-        function getYearUnixBounds(year) {
-            const start = Math.floor(new Date(`${year}-01-01T00:00:00Z`).getTime() / 1000);
-            const end = Math.floor(new Date(`${year+1}-01-01T00:00:00Z`).getTime() / 1000);
-            return { start, end };
+    <!-- Tabs -->
+    <div class="tabs no-print">
+        <div class="tab active" onclick="switchTab('chart')" data-tab="chart">📈 Trend Chart</div>
+        <div class="tab" onclick="switchTab('stats')" data-tab="stats">📊 Statistics</div>
+        <div class="tab" onclick="switchTab('health')" data-tab="health">💊 Health Score</div>
+        <div class="tab" onclick="switchTab('correlation')" data-tab="correlation">🔗 Correlation</div>
+        <div class="tab" onclick="switchTab('milestones')" data-tab="milestones">🏁 Milestones</div>
+        <div class="tab" onclick="switchTab('ranking')" data-tab="ranking">🏆 Ranking Race</div>
+    </div>
+
+    <!-- Chart Tab -->
+    <div id="tab-chart" class="tab-content">
+        <div class="panel">
+            <div class="panel-title">Trend Analysis <span id="chart-subtitle" style="font-size:12px;color:var(--text-muted);font-weight:400;"></span></div>
+            <div class="chart-wrap">
+                <canvas id="mainChart"></canvas>
+                <div class="chart-overlay" id="legend-overlay"></div>
+            </div>
+        </div>
+        <div class="panel">
+            <div class="panel-title">📅 Event Timeline</div>
+            <div id="event-timeline" style="font-size:12px;line-height:1.8;"></div>
+        </div>
+    </div>
+
+    <!-- Stats Tab -->
+    <div id="tab-stats" class="tab-content hidden">
+        <div class="panel">
+            <div class="panel-title">Tag Comparison Matrix</div>
+            <div class="stats-grid" id="stats-grid"></div>
+        </div>
+    </div>
+
+    <!-- Health Tab -->
+    <div id="tab-health" class="tab-content hidden">
+        <div class="panel">
+            <div class="panel-title">Technology Health Scores</div>
+            <div class="matrix-grid" id="health-grid"></div>
+        </div>
+    </div>
+
+    <!-- Correlation Tab -->
+    <div id="tab-correlation" class="tab-content hidden">
+        <div class="panel">
+            <div class="panel-title">Pearson Correlation Matrix</div>
+            <div style="overflow-x:auto;">
+                <table class="corr-table" id="corr-table"></table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Milestones Tab -->
+    <div id="tab-milestones" class="tab-content hidden">
+        <div class="panel">
+            <div class="panel-title">Detected Milestones</div>
+            <div id="milestones-list" style="font-size:13px;line-height:2;"></div>
+        </div>
+    </div>
+
+    <!-- Ranking Tab -->
+    <div id="tab-ranking" class="tab-content hidden">
+        <div class="panel">
+            <div class="panel-title">Bar Chart Race</div>
+            <div class="race-controls no-print">
+                <button class="btn" onclick="playRace()" id="race-play">▶ Play</button>
+                <button class="btn btn-secondary" onclick="pauseRace()">⏸ Pause</button>
+                <input type="range" class="race-slider" id="race-slider" min="0" max="0" value="0" oninput="seekRace(this.value)">
+                <span id="race-year" style="font-size:18px;font-weight:800;color:var(--accent);">—</span>
+            </div>
+            <div class="race-canvas"><canvas id="raceChart"></canvas></div>
+        </div>
+    </div>
+
+    <div class="panel no-print" style="margin-top:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-muted);">
+            <span>Data: Stack Exchange API v2.3</span>
+            <span id="quota-info">Quota: —</span>
+        </div>
+    </div>
+</div>
+
+<!-- Print-only report -->
+<div id="print-report" style="display:none;"></div>
+
+<script>
+// ==================== CONFIG ====================
+const API_BASE = 'https://api.stackexchange.com/2.3';
+const CONCURRENCY = 4;
+const COLORS = ['#58a6ff','#f85149','#3fb950','#d2a8ff','#e3b341','#ff7b72','#79c0ff','#56d364'];
+const EVENTS = [
+    { year: 2009, label: 'Stack Overflow launched' },
+    { year: 2010, label: 'AngularJS debut' },
+    { year: 2011, label: 'Bootstrap released' },
+    { year: 2013, label: 'React open-sourced' },
+    { year: 2014, label: 'Vue.js created' },
+    { year: 2015, label: 'ES6 / React Native' },
+    { year: 2016, label: 'Vue 2.0' },
+    { year: 2018, label: 'React Hooks' },
+    { year: 2019, label: 'Vue 3 announced' },
+    { year: 2020, label: 'TypeScript surge' },
+    { year: 2022, label: 'ChatGPT launch' },
+    { year: 2024, label: 'React 19 / AI boom' }
+];
+
+const CACHE_KEY = 'sotech_cache_v2';
+const THEME_KEY = 'sotech_theme';
+
+// ==================== STATE ====================
+let chartInstance = null, raceChartInstance = null;
+let rawData = {}; // { tag: { periods: [], values: [] } }
+let totalQuestionsByPeriod = {};
+let processedData = {};
+let currentTags = [];
+let currentPeriods = [];
+let raceInterval = null;
+let raceIndex = 0;
+let isGenerating = false;
+
+// ==================== INIT ====================
+function init() {
+    populateYearSelects();
+    loadTheme();
+    parseURLParams();
+    renderEventTimeline();
+    setTimeout(() => { if(currentTags.length) generateData(); }, 100);
+}
+
+function populateYearSelects() {
+    const start = document.getElementById('start-year');
+    const end = document.getElementById('end-year');
+    for (let y = 2009; y <= 2026; y++) {
+        start.add(new Option(y, y));
+        end.add(new Option(y, y));
+    }
+    start.value = 2013;
+    end.value = 2025;
+}
+
+function renderEventTimeline() {
+    const el = document.getElementById('event-timeline');
+    el.innerHTML = EVENTS.map(e => `<span class="event-badge">${e.year}: ${e.label}</span>`).join('');
+}
+
+// ==================== THEME ====================
+function loadTheme() {
+    const saved = localStorage.getItem(THEME_KEY) || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+}
+function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem(THEME_KEY, next);
+    if (chartInstance) chartInstance.update();
+}
+
+// ==================== CACHE ====================
+function getCache() {
+    try {
+        const raw = localStorage.getItem(CACHE_KEY);
+        if (!raw) return { tags: {}, totals: {}, version: 2 };
+        const parsed = JSON.parse(raw);
+        if (parsed.version !== 2) return { tags: {}, totals: {}, version: 2 };
+        return parsed;
+    } catch { return { tags: {}, totals: {}, version: 2 }; }
+}
+function setCache(cache) {
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); } catch {}
+}
+function clearCache() {
+    if (confirm('Clear all cached API data?')) {
+        localStorage.removeItem(CACHE_KEY);
+        alert('Cache cleared.');
+    }
+}
+
+// ==================== API ====================
+const delay = ms => new Promise(r => setTimeout(r, ms));
+
+async function apiFetch(url) {
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.backoff) await delay(data.backoff * 1000);
+    if (data.error_id) throw new Error(data.error_message);
+    return data;
+}
+
+function getPeriods(startYear, endYear, resolution) {
+    const periods = [];
+    if (resolution === 'year') {
+        for (let y = startYear; y <= endYear; y++) {
+            const s = Math.floor(new Date(`${y}-01-01`).getTime() / 1000);
+            const e = Math.floor(new Date(`${y+1}-01-01`).getTime() / 1000);
+            periods.push({ label: `${y}`, start: s, end: e, display: `${y}` });
+        }
+    } else if (resolution === 'quarter') {
+        for (let y = startYear; y <= endYear; y++) {
+            for (let q = 0; q < 4; q++) {
+                const mStart = q * 3 + 1;
+                const mEnd = mStart + 3;
+                const s = Math.floor(new Date(`${y}-${String(mStart).padStart(2,'0')}-01`).getTime() / 1000);
+                const e = Math.floor(new Date(`${y}-${String(mEnd).padStart(2,'0')}-01`).getTime() / 1000);
+                periods.push({ label: `${y}-Q${q+1}`, start: s, end: e, display: `${y} Q${q+1}` });
+            }
+        }
+    } else {
+        for (let y = startYear; y <= endYear; y++) {
+            for (let m = 1; m <= 12; m++) {
+                const s = Math.floor(new Date(`${y}-${String(m).padStart(2,'0')}-01`).getTime() / 1000);
+                const e = Math.floor(new Date(`${y}-${String(m+1).padStart(2,'0')}-01`).getTime() / 1000);
+                periods.push({ label: `${y}-${String(m).padStart(2,'0')}`, start: s, end: e, display: `${y}-${String(m).padStart(2,'0')}` });
+            }
+        }
+    }
+    return periods;
+}
+
+async function fetchWithConcurrency(items, fetchFn, concurrency = CONCURRENCY) {
+    const results = [];
+    for (let i = 0; i < items.length; i += concurrency) {
+        const batch = items.slice(i, i + concurrency);
+        const batchResults = await Promise.all(batch.map(item => fetchFn(item)));
+        results.push(...batchResults);
+        if (i + concurrency < items.length) await delay(50);
+    }
+    return results;
+}
+
+// ==================== GENERATION ====================
+async function generateData() {
+    if (isGenerating) return;
+    const input = document.getElementById('tags-input').value;
+    const tags = [...new Set(input.split(',').map(t => t.trim().toLowerCase()).filter(t => t))];
+    if (!tags.length) return alert('Enter at least one tag.');
+    if (tags.length > 6) return alert('Max 6 tags to respect API limits.');
+
+    const resolution = document.getElementById('resolution-select').value;
+    const startYear = parseInt(document.getElementById('start-year').value);
+    const endYear = parseInt(document.getElementById('end-year').value);
+    if (startYear >= endYear) return alert('Start year must be before end year.');
+
+    const periods = getPeriods(startYear, endYear, resolution);
+    const totalRequests = tags.length * periods.length + periods.length; // +1 for totals
+    
+    if (resolution === 'month' && totalRequests > 300) {
+        if (!confirm(`Monthly mode requires ~${totalRequests} API requests. You have a 300/day limit. Continue?`)) return;
+    }
+
+    isGenerating = true;
+    document.getElementById('generate-btn').disabled = true;
+    document.getElementById('progress-wrap').style.display = 'block';
+    updateProgress(0, totalRequests, 'Initializing...');
+
+    const cache = getCache();
+    rawData = {};
+    totalQuestionsByPeriod = {};
+    currentTags = tags;
+    currentPeriods = periods;
+
+    try {
+        // Fetch totals (all questions) for normalization
+        const totalRequestsArr = periods.map(p => ({
+            key: p.label,
+            url: `${API_BASE}/questions?site=stackoverflow&fromdate=${p.start}&todate=${p.end}&filter=total`
+        }));
+        
+        const totalResults = await fetchWithConcurrency(totalRequestsArr, async req => {
+            if (cache.totals[req.key] !== undefined) return { key: req.key, count: cache.totals[req.key] };
+            const data = await apiFetch(req.url);
+            cache.totals[req.key] = data.total || 0;
+            return { key: req.key, count: data.total || 0 };
+        });
+        totalResults.forEach(r => totalQuestionsByPeriod[r.key] = r.count);
+
+        // Fetch tag data
+        let completed = totalRequestsArr.length;
+        for (const tag of tags) {
+            rawData[tag] = { periods: [], values: [] };
+            const tagRequests = periods.map(p => ({
+                period: p,
+                cacheKey: `${tag}_${p.label}`,
+                url: `${API_BASE}/questions?site=stackoverflow&tagged=${encodeURIComponent(tag)}&fromdate=${p.start}&todate=${p.end}&filter=total`
+            }));
+
+            const tagResults = await fetchWithConcurrency(tagRequests, async req => {
+                if (cache.tags[req.cacheKey] !== undefined) {
+                    completed++;
+                    updateProgress(completed, totalRequests, `Cached: ${tag} ${req.period.display}`);
+                    return { period: req.period, count: cache.tags[req.cacheKey] };
+                }
+                const data = await apiFetch(req.url);
+                cache.tags[req.cacheKey] = data.total || 0;
+                completed++;
+                updateProgress(completed, totalRequests, `Fetching: ${tag} ${req.period.display}`);
+                if (data.quota_remaining !== undefined) {
+                    document.getElementById('quota-info').textContent = `Quota: ${data.quota_remaining}`;
+                }
+                return { period: req.period, count: data.total || 0 };
+            });
+
+            tagResults.sort((a,b) => a.period.label.localeCompare(b.period.label));
+            rawData[tag].periods = tagResults.map(r => r.period.display);
+            rawData[tag].values = tagResults.map(r => r.count);
         }
 
-        // Utility: sleep for throttling API requests
-        const delay = ms => new Promise(res => setTimeout(res, ms));
+        setCache(cache);
+        processData();
+        renderAll();
 
-        async function fetchTagCountForYear(tag, year) {
-            const cacheKey = `${tag}-${year}`;
-            if (cache[cacheKey] !== undefined) {
-                return { count: cache[cacheKey], quota: null, cached: true };
-            }
+    } catch (err) {
+        alert('API Error: ' + err.message);
+        console.error(err);
+    } finally {
+        isGenerating = false;
+        document.getElementById('generate-btn').disabled = false;
+        setTimeout(() => document.getElementById('progress-wrap').style.display = 'none', 2000);
+        updateURL();
+    }
+}
 
-            const { start, end } = getYearUnixBounds(year);
-            const url = `https://api.stackexchange.com/2.3/questions?site=stackoverflow&tagged=${encodeURIComponent(tag)}&fromdate=${start}&todate=${end}&filter=total`;
+function updateProgress(done, total, msg) {
+    const pct = Math.round((done / total) * 100);
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('status-msg').textContent = msg;
+    document.getElementById('progress-pct').textContent = `${done}/${total} (${pct}%)`;
+}
 
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
+async function loadTopTags() {
+    const btn = document.getElementById('top-tags-btn');
+    btn.disabled = true;
+    try {
+        const data = await apiFetch(`${API_BASE}/tags?order=desc&sort=popular&pagesize=10&site=stackoverflow`);
+        const tags = data.items.map(t => t.name).join(', ');
+        document.getElementById('tags-input').value = tags;
+        alert('Top 10 tags loaded. Click Generate to fetch their history.');
+    } catch (err) {
+        alert('Failed to load top tags: ' + err.message);
+    } finally {
+        btn.disabled = false;
+    }
+}
 
-                if (data.error_id) {
-                    throw new Error(data.error_message);
-                }
+// ==================== DATA PROCESSING ====================
+function processData() {
+    const mode = document.getElementById('normalize-select').value;
+    const ma = parseInt(document.getElementById('ma-select').value);
+    processedData = {};
 
-                const count = data.total || 0;
-                cache[cacheKey] = count; // Save to cache
+    for (const tag of currentTags) {
+        let values = [...rawData[tag].values];
+        const periods = rawData[tag].periods;
 
-                // Respect API Backoff if requested by StackOverflow
-                if (data.backoff) {
-                    await delay(data.backoff * 1000);
-                } else {
-                    await delay(50); // Standard flat throttle to prevent IP bursting
-                }
-
-                return { count, quota: data.quota_remaining, cached: false };
-
-            } catch (err) {
-                console.error(`Failed fetching ${tag} for ${year}:`, err);
-                throw err;
-            }
+        // Normalization
+        if (mode === 'percent') {
+            values = values.map((v, i) => {
+                const total = totalQuestionsByPeriod[Object.keys(totalQuestionsByPeriod)[i]] || 1;
+                return (v / total) * 100;
+            });
+        } else if (mode === 'indexed') {
+            const first = values.find(v => v > 0) || 1;
+            values = values.map(v => (v / first) * 100);
+        } else if (mode === 'growth') {
+            values = values.map((v, i) => i === 0 ? 0 : ((v - values[i-1]) / Math.max(values[i-1], 1)) * 100);
         }
 
-        async function generateGraph() {
-            const input = document.getElementById('tags-input').value;
-            const tags = input.split(',').map(t => t.trim().toLowerCase()).filter(t => t);
-            
-            if (tags.length === 0) {
-                alert("Please enter at least one tag.");
-                return;
-            }
-            if (tags.length > 4) {
-                alert("To respect StackOverflow's public API limits, please query a maximum of 4 tags at a time.");
-                return;
-            }
-
-            // UI Setup
-            const btn = document.getElementById('generate-btn');
-            const statusContainer = document.getElementById('status-container');
-            const statusMsg = document.getElementById('status-msg');
-            const progressBar = document.getElementById('progress-bar');
-            const progressText = document.getElementById('progress-text');
-            const quotaInfo = document.getElementById('quota-info');
-
-            btn.disabled = true;
-            statusContainer.style.display = 'flex';
-            
-            const totalRequests = tags.length * YEARS.length;
-            let completedRequests = 0;
-            
-            const chartDatasets = [];
-
-            try {
-                for (let i = 0; i < tags.length; i++) {
-                    const tag = tags[i];
-                    const dataPoints = [];
-                    
-                    for (let year of YEARS) {
-                        statusMsg.innerText = `Querying StackOverflow: '${tag}' in ${year}...`;
-                        
-                        const result = await fetchTagCountForYear(tag, year);
-                        dataPoints.push(result.count);
-                        
-                        completedRequests++;
-                        const percent = Math.round((completedRequests / totalRequests) * 100);
-                        progressBar.style.width = `${percent}%`;
-                        progressText.innerText = `${completedRequests} / ${totalRequests}`;
-                        
-                        if (result.quota !== null) {
-                            quotaInfo.innerText = `API Quota Remaining: ${result.quota}`;
-                            if (result.quota < 20) quotaInfo.className = 'quota-warning';
-                        }
-                    }
-
-                    chartDatasets.push({
-                        label: tag,
-                        data: dataPoints,
-                        borderColor: COLORS[i % COLORS.length],
-                        backgroundColor: COLORS[i % COLORS.length] + '22',
-                        borderWidth: 3,
-                        pointRadius: 4,
-                        pointBackgroundColor: COLORS[i % COLORS.length],
-                        fill: true,
-                        tension: 0.4 // Smooth curves
-                    });
-                }
-
-                statusMsg.innerText = "Data gathered! Rendering chart...";
-                renderChart(chartDatasets);
-
-            } catch (error) {
-                alert(`API Error: ${error.message}\n\nYou may have hit the StackOverflow rate limit (300 requests/day for unauthenticated IPs). Try again tomorrow or use fewer tags.`);
-            } finally {
-                btn.disabled = false;
-                setTimeout(() => { statusContainer.style.display = 'none'; progressBar.style.width = '0%'; }, 2000);
-            }
-        }
-
-        function renderChart(datasets) {
-            const ctx = document.getElementById('trendChart').getContext('2d');
-            
-            // Destroy existing chart to prevent hover overlap glitches
-            if (chartInstance) {
-                chartInstance.destroy();
-            }
-
-            Chart.defaults.color = '#8b949e';
-            Chart.defaults.font.family = "'Inter', sans-serif";
-
-            chartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: YEARS,
-                    datasets: datasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        mode: 'index',
-                        intersect: false,
-                    },
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                            labels: { color: '#c9d1d9', font: { size: 14, weight: '600' }, padding: 20 }
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(22, 27, 34, 0.9)',
-                            titleColor: '#fff',
-                            bodyColor: '#c9d1d9',
-                            borderColor: '#30363d',
-                            borderWidth: 1,
-                            padding: 12,
-                            boxPadding: 6,
-                            usePointStyle: true
-                        }
-                    },
-                    scales: {
-                        x: {
-                            grid: { color: '#30363d', drawBorder: false }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            grid: { color: '#30363d', drawBorder: false },
-                            title: {
-                                display: true,
-                                text: 'Questions Asked Per Year',
-                                color: '#8b949e',
-                                font: { size: 13 }
-                            }
-                        }
-                    }
-                }
+        // Moving average
+        if (ma > 0) {
+            values = values.map((v, i, arr) => {
+                if (i < ma - 1) return v;
+                let sum = 0;
+                for (let j = 0; j < ma; j++) sum += arr[i - j];
+                return sum / ma;
             });
         }
+
+        // Forecasting (linear regression on last 5 points, project 3 forward)
+        const forecast = forecastLinear(values, 3);
         
-        // Initialize an empty chart on load
-        renderChart([]);
-    </script>
+        processedData[tag] = { periods, values, forecast };
+    }
+}
+
+function forecastLinear(data, steps) {
+    const n = data.length;
+    if (n < 3) return { values: [], labels: [] };
+    const x = [];
+    const y = [];
+    for (let i = Math.max(0, n - 5); i < n; i++) {
+        x.push(i);
+        y.push(data[i]);
+    }
+    const sumX = x.reduce((a,b)=>a+b,0);
+    const sumY = y.reduce((a,b)=>a+b,0);
+    const sumXY = x.reduce((s,xi,i)=>s+xi*y[i],0);
+    const sumX2 = x.reduce((s,xi)=>s+xi*xi,0);
+    const m = (x.length*sumXY - sumX*sumY) / (x.length*sumX2 - sumX*sumX);
+    const b = (sumY - m*sumX) / x.length;
+    
+    const fValues = [];
+    const fLabels = [];
+    for (let i = 1; i <= steps; i++) {
+        fValues.push(Math.max(0, m * (n - 1 + i) + b));
+        fLabels.push(`+${i}`);
+    }
+    return { values: fValues, labels: fLabels };
+}
+
+// ==================== RENDERING ====================
+function renderAll() {
+    renderChart();
+    renderStats();
+    renderHealth();
+    renderCorrelation();
+    renderMilestones();
+    prepareRace();
+}
+
+function renderChart() {
+    const ctx = document.getElementById('mainChart').getContext('2d');
+    if (chartInstance) chartInstance.destroy();
+
+    const labels = [...processedData[currentTags[0]].periods];
+    const forecastLabels = processedData[currentTags[0]].forecast.labels;
+    const allLabels = [...labels, ...forecastLabels];
+
+    const datasets = currentTags.map((tag, i) => {
+        const d = processedData[tag];
+        const data = [...d.values, ...Array(forecastLabels.length).fill(null)];
+        const forecastData = Array(d.values.length).fill(null).concat(d.forecast.values);
+        
+        return [
+            {
+                label: tag,
+                data: data,
+                borderColor: COLORS[i % COLORS.length],
+                backgroundColor: COLORS[i % COLORS.length] + '20',
+                borderWidth: 2.5,
+                pointRadius: 3,
+                tension: 0.3,
+                fill: false
+            },
+            {
+                label: `${tag} (forecast)`,
+                data: forecastData,
+                borderColor: COLORS[i % COLORS.length],
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                borderDash: [6, 4],
+                pointRadius: 0,
+                tension: 0.3,
+                fill: false
+            }
+        ];
+    }).flat();
+
+    const mode = document.getElementById('normalize-select').value;
+    const yLabel = {
+        raw: 'Questions',
+        percent: '% of All Questions',
+        indexed: 'Index (Base = 100)',
+        growth: 'YoY Growth %'
+    }[mode];
+
+    document.getElementById('chart-subtitle').textContent = 
+        `${currentPeriods.length} periods • ${mode} • ${document.getElementById('ma-select').value !== '0' ? document.getElementById('ma-select').selectedOptions[0].text : 'No smoothing'}`;
+
+    chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: { labels: allLabels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20,
+                        color: getComputedStyle(document.body).getPropertyValue('--text').trim(),
+                        font: { size: 12 }
+                    },
+                    onClick: (e, legendItem) => {
+                        const tag = legendItem.text.replace(' (forecast)', '');
+                        showLegendStats(tag);
+                    }
+                },
+                tooltip: {
+                    backgroundColor: getComputedStyle(document.body).getPropertyValue('--surface').trim(),
+                    titleColor: getComputedStyle(document.body).getPropertyValue('--text').trim(),
+                    bodyColor: getComputedStyle(document.body).getPropertyValue('--text-muted').trim(),
+                    borderColor: getComputedStyle(document.body).getPropertyValue('--border').trim(),
+                    borderWidth: 1,
+                    padding: 12
+                },
+                annotation: {
+                    annotations: generateAnnotations()
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: getComputedStyle(document.body).getPropertyValue('--border').trim(), drawBorder: false },
+                    ticks: { color: getComputedStyle(document.body).getPropertyValue('--text-muted').trim(), maxRotation: 45 }
+                },
+                y: {
+                    beginAtZero: mode !== 'growth',
+                    grid: { color: getComputedStyle(document.body).getPropertyValue('--border').trim(), drawBorder: false },
+                    ticks: { color: getComputedStyle(document.body).getPropertyValue('--text-muted').trim() },
+                    title: { display: true, text: yLabel, color: getComputedStyle(document.body).getPropertyValue('--text-muted').trim() }
+                }
+            }
+        },
+        plugins: [{
+            id: 'eventLines',
+            afterDraw: (chart) => {
+                const ctx = chart.ctx;
+                const xAxis = chart.scales.x;
+                const yAxis = chart.scales.y;
+                const startYear = parseInt(document.getElementById('start-year').value);
+                const endYear = parseInt(document.getElementById('end-year').value);
+                
+                EVENTS.forEach(ev => {
+                    if (ev.year < startYear || ev.year > endYear) return;
+                    const idx = allLabels.findIndex(l => l.startsWith(ev.year.toString()));
+                    if (idx === -1) return;
+                    const x = xAxis.getPixelForTick(idx);
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.moveTo(x, yAxis.top);
+                    ctx.lineTo(x, yAxis.bottom);
+                    ctx.strokeStyle = 'rgba(88,166,255,0.3)';
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([4, 4]);
+                    ctx.stroke();
+                    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--accent').trim();
+                    ctx.font = '10px Inter';
+                    ctx.fillText(ev.label, x + 4, yAxis.top + 12);
+                    ctx.restore();
+                });
+            }
+        }]
+    });
+}
+
+function generateAnnotations() {
+    // Chart.js annotation plugin not loaded, using custom plugin above
+    return {};
+}
+
+function showLegendStats(tag) {
+    const overlay = document.getElementById('legend-overlay');
+    const stats = computeTagStats(tag);
+    overlay.innerHTML = `
+        <div style="font-weight:700;margin-bottom:8px;color:${COLORS[currentTags.indexOf(tag) % COLORS.length]}">${tag}</div>
+        <div class="stat-row"><span class="stat-label">Peak</span><span>${stats.peakYear} (${fmt(stats.peakValue)})</span></div>
+        <div class="stat-row"><span class="stat-label">Average</span><span>${fmt(stats.avg)}</span></div>
+        <div class="stat-row"><span class="stat-label">Median</span><span>${fmt(stats.median)}</span></div>
+        <div class="stat-row"><span class="stat-label">Best Growth</span><span>${stats.bestGrowthYear} (${fmt(stats.bestGrowth)}%)</span></div>
+        <div class="stat-row"><span class="stat-label">Worst Drop</span><span>${stats.worstDropYear} (${fmt(stats.worstDrop)}%)</span></div>
+    `;
+    overlay.style.display = 'block';
+    setTimeout(() => overlay.style.display = 'none', 6000);
+}
+
+function computeTagStats(tag) {
+    const vals = rawData[tag].values;
+    const periods = rawData[tag].periods;
+    const maxVal = Math.max(...vals);
+    const maxIdx = vals.indexOf(maxVal);
+    const avg = vals.reduce((a,b)=>a+b,0) / vals.length;
+    const sorted = [...vals].sort((a,b)=>a-b);
+    const median = sorted[Math.floor(sorted.length/2)];
+    
+    let bestGrowth = -Infinity, bestGrowthYear = '-';
+    let worstDrop = Infinity, worstDropYear = '-';
+    for (let i = 1; i < vals.length; i++) {
+        const change = ((vals[i] - vals[i-1]) / Math.max(vals[i-1],1)) * 100;
+        if (change > bestGrowth) { bestGrowth = change; bestGrowthYear = periods[i]; }
+        if (change < worstDrop) { worstDrop = change; worstDropYear = periods[i]; }
+    }
+    
+    return { peakValue: maxVal, peakYear: periods[maxIdx], avg, median, bestGrowth, bestGrowthYear, worstDrop, worstDropYear };
+}
+
+function renderStats() {
+    const grid = document.getElementById('stats-grid');
+    grid.innerHTML = '';
+    
+    currentTags.forEach((tag, i) => {
+        const vals = rawData[tag].values;
+        const periods = rawData[tag].periods;
+        const stats = computeTagStats(tag);
+        const firstIdx = vals.findIndex(v => v > 0);
+        const firstYear = firstIdx >= 0 ? periods[firstIdx] : '-';
+        const total = vals.reduce((a,b)=>a+b,0);
+        const cagr = computeCAGR(vals);
+        const volatility = computeVolatility(vals);
+        const trend = stats.bestGrowth > 10 ? 'up' : (stats.worstDrop < -10 ? 'down' : 'flat');
+        
+        const card = document.createElement('div');
+        card.className = 'stat-card';
+        card.innerHTML = `
+            <div class="stat-header">
+                <span class="stat-tag" style="color:${COLORS[i % COLORS.length]}">● ${tag}</span>
+                <span class="stat-trend trend-${trend}">${trend === 'up' ? '↑ Growing' : trend === 'down' ? '↓ Declining' : '→ Stable'}</span>
+            </div>
+            <div class="stat-row"><span class="stat-label">Peak Year</span><span class="stat-value">${stats.peakYear} (${fmt(stats.peakValue)})</span></div>
+            <div class="stat-row"><span class="stat-label">First Seen</span><span class="stat-value">${firstYear}</span></div>
+            <div class="stat-row"><span class="stat-label">Lifetime Total</span><span class="stat-value">${fmt(total)}</span></div>
+            <div class="stat-row"><span class="stat-label">Average / Period</span><span class="stat-value">${fmt(stats.avg)}</span></div>
+            <div class="stat-row"><span class="stat-label">Median</span><span class="stat-value">${fmt(stats.median)}</span></div>
+            <div class="stat-row"><span class="stat-label">CAGR</span><span class="stat-value">${cagr}%</span></div>
+            <div class="stat-row"><span class="stat-label">Volatility</span><span class="stat-value">${volatility}</span></div>
+            <div class="stat-row"><span class="stat-label">Best Growth</span><span class="stat-value">${stats.bestGrowthYear} (${fmt(stats.bestGrowth)}%)</span></div>
+            <div class="stat-row"><span class="stat-label">Largest Decline</span><span class="stat-value">${stats.worstDropYear} (${fmt(stats.worstDrop)}%)</span></div>
+        `;
+        grid.appendChild(card);
+    });
+}
+
+function computeCAGR(vals) {
+    const first = vals.find(v => v > 0);
+    const last = vals[vals.length - 1];
+    const years = vals.filter(v => v > 0).length;
+    if (!first || !last || years < 2) return 0;
+    return (((last / first) ** (1 / (years - 1)) - 1) * 100).toFixed(1);
+}
+
+function computeVolatility(vals) {
+    const mean = vals.reduce((a,b)=>a+b,0) / vals.length;
+    const variance = vals.reduce((sum, v) => sum + (v - mean)**2, 0) / vals.length;
+    const cv = (Math.sqrt(variance) / mean) * 100;
+    if (cv < 30) return 'Low';
+    if (cv < 60) return 'Medium';
+    return 'High';
+}
+
+function renderHealth() {
+    const grid = document.getElementById('health-grid');
+    grid.innerHTML = '';
+    
+    currentTags.forEach((tag, i) => {
+        const vals = rawData[tag].values;
+        const periods = rawData[tag].periods;
+        const firstIdx = vals.findIndex(v => v > 0);
+        const firstYear = firstIdx >= 0 ? parseInt(periods[firstIdx]) : 2025;
+        const age = 2026 - firstYear;
+        
+        // Popularity: latest value normalized to 100
+        const latest = vals[vals.length - 1] || 0;
+        const maxAll = Math.max(...currentTags.map(t => Math.max(...rawData[t].values)));
+        const popularity = Math.min(100, Math.round((latest / maxAll) * 100));
+        
+        // Momentum: slope of last 3 points
+        const recent = vals.slice(-3);
+        const momentum = Math.min(100, Math.max(0, Math.round(((recent[2] - recent[0]) / Math.max(recent[0], 1)) * 50 + 50)));
+        
+        // Consistency: inverse coefficient of variation
+        const mean = vals.reduce((a,b)=>a+b,0) / vals.length;
+        const std = Math.sqrt(vals.reduce((sum,v)=>sum+(v-mean)**2,0) / vals.length);
+        const consistency = Math.min(100, Math.max(0, Math.round(100 - (std / Math.max(mean,1)) * 30)));
+        
+        // Longevity
+        const longevity = Math.min(100, age * 8);
+        
+        const card = document.createElement('div');
+        card.className = 'stat-card';
+        card.innerHTML = `
+            <div class="stat-header">
+                <span class="stat-tag" style="color:${COLORS[i % COLORS.length]}">● ${tag}</span>
+                <span style="font-size:20px;font-weight:800;">${Math.round((popularity + momentum + consistency + longevity) / 4)}</span>
+            </div>
+            ${healthBar('Popularity', popularity, COLORS[i % COLORS.length])}
+            ${healthBar('Momentum', momentum, COLORS[i % COLORS.length])}
+            ${healthBar('Consistency', consistency, COLORS[i % COLORS.length])}
+            ${healthBar('Longevity', longevity, COLORS[i % COLORS.length])}
+        `;
+        grid.appendChild(card);
+    });
+}
+
+function healthBar(label, score, color) {
+    return `
+        <div class="health-bar">
+            <span class="health-label">${label}</span>
+            <div class="health-track"><div class="health-fill" style="width:${score}%;background:${color}"></div></div>
+            <span class="health-score">${score}</span>
+        </div>
+    `;
+}
+
+function renderCorrelation() {
+    const table = document.getElementById('corr-table');
+    if (currentTags.length < 2) {
+        table.innerHTML = '<tr><td>Add 2+ tags to see correlation</td></tr>';
+        return;
+    }
+    
+    let html = '<tr><th></th>';
+    currentTags.forEach(t => html += `<th>${t}</th>`);
+    html += '</tr>';
+    
+    currentTags.forEach((t1, i) => {
+        html += `<tr><th>${t1}</th>`;
+        currentTags.forEach((t2, j) => {
+            const corr = i === j ? 1 : pearsonCorrelation(rawData[t1].values, rawData[t2].values);
+            const color = corr > 0.7 ? 'var(--success)' : corr < -0.3 ? 'var(--danger)' : 'var(--warning)';
+            html += `<td class="corr-cell" style="color:${color}">${corr.toFixed(2)}</td>`;
+        });
+        html += '</tr>';
+    });
+    table.innerHTML = html;
+}
+
+function pearsonCorrelation(x, y) {
+    const n = Math.min(x.length, y.length);
+    if (n < 2) return 0;
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+    for (let i = 0; i < n; i++) {
+        sumX += x[i]; sumY += y[i];
+        sumXY += x[i] * y[i];
+        sumX2 += x[i] * x[i];
+        sumY2 += y[i] * y[i];
+    }
+    const num = n * sumXY - sumX * sumY;
+    const den = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+    return den === 0 ? 0 : num / den;
+}
+
+function renderMilestones() {
+    const list = document.getElementById('milestones-list');
+    const milestones = [];
+    
+    // Crossovers
+    for (let i = 0; i < currentTags.length; i++) {
+        for (let j = i + 1; j < currentTags.length; j++) {
+            const t1 = currentTags[i], t2 = currentTags[j];
+            const v1 = rawData[t1].values, v2 = rawData[t2].values;
+            const periods = rawData[t1].periods;
+            for (let k = 1; k < v1.length; k++) {
+                if (v1[k-1] <= v2[k-1] && v1[k] > v2[k]) {
+                    milestones.push({ year: periods[k], text: `↑ ${t1} surpassed ${t2}`, type: 'up' });
+                } else if (v1[k-1] >= v2[k-1] && v1[k] < v2[k]) {
+                    milestones.push({ year: periods[k], text: `↑ ${t2} surpassed ${t1}`, type: 'up' });
+                }
+            }
+        }
+    }
+    
+    // Peaks
+    currentTags.forEach(tag => {
+        const stats = computeTagStats(tag);
+        milestones.push({ year: stats.peakYear, text: `● ${tag} peaked at ${fmt(stats.peakValue)}`, type: 'peak' });
+    });
+    
+    milestones.sort((a,b) => String(a.year).localeCompare(String(b.year)));
+    
+    list.innerHTML = milestones.length ? milestones.map(m => `
+        <div style="padding:8px 0;border-bottom:1px solid var(--border);">
+            <span style="color:var(--text-muted);font-weight:600;margin-right:12px;">${m.year}</span>
+            <span style="color:${m.type==='up'?'var(--success)':'var(--accent)'}">${m.text}</span>
+        </div>
+    `).join('') : '<div style="color:var(--text-muted);">No milestones detected with current tags.</div>';
+}
+
+// ==================== RANKING RACE ====================
+function prepareRace() {
+    if (!currentTags.length) return;
+    const slider = document.getElementById('race-slider');
+    slider.max = currentPeriods.length - 1;
+    slider.value = 0;
+    raceIndex = 0;
+    updateRaceFrame();
+}
+
+function updateRaceFrame() {
+    const idx = raceIndex;
+    const year = currentPeriods[idx];
+    document.getElementById('race-year').textContent = year;
+    
+    const data = currentTags.map(tag => ({
+        tag,
+        value: rawData[tag].values[idx] || 0
+    })).sort((a,b) => b.value - a.value);
+    
+    const ctx = document.getElementById('raceChart').getContext('2d');
+    if (raceChartInstance) raceChartInstance.destroy();
+    
+    raceChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.map(d => d.tag),
+            datasets: [{
+                data: data.map(d => d.value),
+                backgroundColor: data.map((_,i) => COLORS[i % COLORS.length]),
+                borderRadius: 6
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: 'var(--border)' }, ticks: { color: 'var(--text-muted)' } },
+                y: { grid: { display: false }, ticks: { color: 'var(--text)', font: { weight: '600' } } }
+            },
+            animation: { duration: 400 }
+        }
+    });
+}
+
+function playRace() {
+    pauseRace();
+    raceInterval = setInterval(() => {
+        raceIndex++;
+        if (raceIndex >= currentPeriods.length) raceIndex = 0;
+        document.getElementById('race-slider').value = raceIndex;
+        updateRaceFrame();
+    }, 800);
+    document.getElementById('race-play').textContent = '⏹ Stop';
+    document.getElementById('race-play').onclick = pauseRace;
+}
+
+function pauseRace() {
+    if (raceInterval) clearInterval(raceInterval);
+    raceInterval = null;
+    document.getElementById('race-play').textContent = '▶ Play';
+    document.getElementById('race-play').onclick = playRace;
+}
+
+function seekRace(val) {
+    raceIndex = parseInt(val);
+    updateRaceFrame();
+}
+
+// ==================== AUTOCOMPLETE ====================
+let autoDebounce;
+function handleInput(e) {
+    clearTimeout(autoDebounce);
+    const val = e.target.value.split(',').pop().trim();
+    if (val.length < 2) return document.getElementById('autocomplete-dropdown').style.display = 'none';
+    
+    autoDebounce = setTimeout(async () => {
+        try {
+            const data = await apiFetch(`${API_BASE}/tags?order=desc&sort=popular&inname=${encodeURIComponent(val)}&pagesize=8&site=stackoverflow`);
+            const drop = document.getElementById('autocomplete-dropdown');
+            if (!data.items?.length) { drop.style.display = 'none'; return; }
+            drop.innerHTML = data.items.map(t => `
+                <div class="autocomplete-item" onclick="selectTag('${t.name}')">
+                    <span>${t.name}</span><small>${fmt(t.count)} questions</small>
+                </div>
+            `).join('');
+            drop.style.display = 'block';
+        } catch {}
+    }, 300);
+}
+
+function handleKeyDown(e) {
+    if (e.key === 'Enter') {
+        document.getElementById('autocomplete-dropdown').style.display = 'none';
+        generateData();
+    }
+}
+
+function selectTag(tag) {
+    const input = document.getElementById('tags-input');
+    const parts = input.value.split(',').map(s => s.trim());
+    parts.pop();
+    parts.push(tag);
+    input.value = parts.join(', ') + ', ';
+    document.getElementById('autocomplete-dropdown').style.display = 'none';
+    input.focus();
+}
+
+function setTags(tags) {
+    document.getElementById('tags-input').value = tags;
+    generateData();
+}
+
+// ==================== UI HELPERS ====================
+function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('hidden', c.id !== `tab-${name}`));
+    if (name === 'ranking' && !raceChartInstance) prepareRace();
+}
+
+function handleResolutionChange() {
+    const res = document.getElementById('resolution-select').value;
+    const start = document.getElementById('start-year');
+    const end = document.getElementById('end-year');
+    if (res === 'month') {
+        start.value = 2020;
+        end.value = 2025;
+    } else if (res === 'quarter') {
+        start.value = 2018;
+        end.value = 2025;
+    }
+}
+
+function fmt(n) {
+    if (n === undefined || n === null) return '-';
+    if (typeof n === 'number') {
+        if (Math.abs(n) >= 1000000) return (n/1000000).toFixed(1) + 'M';
+        if (Math.abs(n) >= 1000) return (n/1000).toFixed(1) + 'k';
+        return n.toFixed(n % 1 === 0 ? 0 : 1);
+    }
+    return n;
+}
+
+// ==================== EXPORT ====================
+function downloadPNG() {
+    const canvas = document.getElementById('mainChart');
+    const link = document.createElement('a');
+    link.download = `so-trends-${currentTags.join('-')}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+}
+
+function downloadCSV() {
+    let csv = 'Period,' + currentTags.join(',') + '\n';
+    const len = rawData[currentTags[0]].periods.length;
+    for (let i = 0; i < len; i++) {
+        csv += rawData[currentTags[0]].periods[i] + ',';
+        csv += currentTags.map(t => rawData[t].values[i]).join(',') + '\n';
+    }
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = `so-trends-${currentTags.join('-')}.csv`;
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
+function downloadJSON() {
+    const payload = {
+        tags: currentTags,
+        periods: currentPeriods,
+        rawData,
+        processedData,
+        generated: new Date().toISOString()
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = `so-trends-${currentTags.join('-')}.json`;
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
+function downloadPDF() {
+    const report = document.getElementById('print-report');
+    report.style.display = 'block';
+    report.innerHTML = `
+        <h1>Stack Overflow Tech Trends Report</h1>
+        <p>Generated: ${new Date().toLocaleString()}</p>
+        <p>Tags: ${currentTags.join(', ')}</p>
+        <hr>
+        <h2>Statistics</h2>
+        <div id="print-stats"></div>
+        <h2>Correlation Matrix</h2>
+        <div id="print-corr"></div>
+    `;
+    // Clone stats and correlation
+    const statsClone = document.getElementById('stats-grid').cloneNode(true);
+    const corrClone = document.getElementById('corr-table').cloneNode(true);
+    report.querySelector('#print-stats').appendChild(statsClone);
+    report.querySelector('#print-corr').appendChild(corrClone);
+    
+    window.print();
+    report.style.display = 'none';
+}
+
+// ==================== URL SHARING ====================
+function updateURL() {
+    const params = new URLSearchParams();
+    params.set('tags', currentTags.join(','));
+    params.set('resolution', document.getElementById('resolution-select').value);
+    params.set('normalize', document.getElementById('normalize-select').value);
+    params.set('ma', document.getElementById('ma-select').value);
+    params.set('start', document.getElementById('start-year').value);
+    params.set('end', document.getElementById('end-year').value);
+    window.history.replaceState({}, '', `${window.location.pathname}?${params}`);
+}
+
+function parseURLParams() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('tags')) document.getElementById('tags-input').value = params.get('tags');
+    if (params.has('resolution')) document.getElementById('resolution-select').value = params.get('resolution');
+    if (params.has('normalize')) document.getElementById('normalize-select').value = params.get('normalize');
+    if (params.has('ma')) document.getElementById('ma-select').value = params.get('ma');
+    if (params.has('start')) document.getElementById('start-year').value = params.get('start');
+    if (params.has('end')) document.getElementById('end-year').value = params.get('end');
+}
+
+function shareURL() {
+    updateURL();
+    navigator.clipboard.writeText(window.location.href);
+    alert('URL copied to clipboard!');
+}
+
+// Close dropdowns on click outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.autocomplete-wrap')) {
+        document.getElementById('autocomplete-dropdown').style.display = 'none';
+    }
+    if (!e.target.closest('#export-menu') && !e.target.closest('.btn-secondary')) {
+        document.getElementById('export-menu').classList.add('hidden');
+    }
+});
+
+// Boot
+init();
+</script>
 </body>
 </html>
