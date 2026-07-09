@@ -374,7 +374,8 @@
         const displayCtx = displayCanvas.getContext('2d');
         
         let isPlaying = false, animationId = null, currentMode = 'file';
-        let invertBrightness = false, isFullColor = false;
+        // ENABLE FULL COLOR BY DEFAULT HERE
+        let invertBrightness = false, isFullColor = true;
         let lastFrameTime = 0, frameCount = 0;
         let currentAsciiText = ''; // Stores text string for copying/exporting
         
@@ -393,8 +394,11 @@
 
         function toggleFullColor() {
             isFullColor = !isFullColor;
+            applyColorMode();
+        }
+
+        function applyColorMode() {
             document.getElementById('colorToggle').classList.toggle('active', isFullColor);
-            
             if (isFullColor) {
                 asciiOutput.style.display = 'none';
                 displayCanvas.style.display = 'block';
@@ -666,7 +670,9 @@
             setTimeout(() => t.classList.remove('show'), 3000);
         }
 
+        // Initialize UI State
         updateSettings();
+        applyColorMode();
     </script>
 </body>
 </html>
