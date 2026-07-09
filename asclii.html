@@ -57,12 +57,6 @@
             animation: ambientShift 20s ease-in-out infinite;
         }
 
-        @keyframes ambientShift {
-            0%, 100% { transform: translate(0, 0) rotate(0deg); }
-            33% { transform: translate(2%, 1%) rotate(1deg); }
-            66% { transform: translate(-1%, 2%) rotate(-1deg); }
-        }
-
         .app {
             position: relative; z-index: 1; max-width: 1400px;
             margin: 0 auto; padding: 24px; display: flex;
@@ -121,6 +115,8 @@
         #videoInput { display: none; }
 
         .control-group { margin-bottom: 16px; }
+        .control-group.disabled { opacity: 0.3; pointer-events: none; transition: var(--transition); }
+        
         .control-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .control-label span { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
         .control-value { font-size: 12px; color: var(--accent); font-family: 'JetBrains Mono', monospace; font-weight: 500; background: var(--accent-dim); padding: 2px 8px; border-radius: 4px; }
@@ -154,7 +150,10 @@
             font-family: 'JetBrains Mono', monospace; font-size: 8px; line-height: 8px; white-space: pre; 
             overflow: hidden; color: var(--accent); transition: color 0.3s ease; max-width: 100%; 
             user-select: text; text-align: center; font-weight: bold; letter-spacing: 1px;
-            /* Disabled text-shadow here for massive performance boost. Re-enable if you want a heavy glow */
+        }
+
+        #asciiDisplayCanvas {
+            max-width: 100%; max-height: 100%; object-fit: contain; display: none;
         }
         
         .empty-state { text-align: center; color: var(--text-muted); }
@@ -185,7 +184,6 @@
         .toast.show { transform: translateY(0); opacity: 1; }
         .toast.success { border-color: rgba(52, 211, 153, 0.3); }
 
-        /* Important Fixes */
         .hidden { display: none !important; }
     </style>
 </head>
@@ -260,8 +258,16 @@
 
                 <div class="panel">
                     <div class="panel-title"><span>◐</span> Appearance</div>
+                    
                     <div class="control-group">
-                        <div class="control-label"><span>Text Color</span></div>
+                        <div class="toggle-row">
+                            <span style="font-size: 13px; color: var(--text-primary); font-weight: 600;">Full Original Colors</span>
+                            <div class="toggle-switch" id="colorToggle" onclick="toggleFullColor()"></div>
+                        </div>
+                    </div>
+
+                    <div class="control-group" id="paletteGroup">
+                        <div class="control-label"><span>Monochrome Color</span></div>
                         <div class="color-palette" id="colorPalette">
                             <div class="color-swatch active" style="background: #5eead4;" onclick="setColor('#5eead4', this)"></div>
                             <div class="color-swatch" style="background: #f472b6;" onclick="setColor('#f472b6', this)"></div>
@@ -297,7 +303,7 @@
                         <button class="view-tab" onclick="showView('original', this)">Original</button>
                     </div>
                     <div class="preview-actions">
-                        <button class="btn btn-icon" onclick="copyAscii()" title="Copy to clipboard">📋</button>
+                        <button class="btn btn-icon" onclick="copyAscii()" title="Copy text to clipboard">📋</button>
                     </div>
                 </div>
 
@@ -307,7 +313,12 @@
                         <h3>Ready to convert</h3>
                         <p>Upload a video or enable your webcam</p>
                     </div>
+                    
+                    <!-- Monochrome Output -->
                     <pre id="asciiOutput"></pre>
+                    <!-- Full Color Output -->
+                    <canvas id="asciiDisplayCanvas"></canvas>
+
                     <canvas id="originalCanvas"></canvas>
                 </div>
 
@@ -341,16 +352,26 @@
     <script>
         const video = document.getElementById('videoElement');
         const webcamVideo = document.getElementById('webcamVideo');
-        const canvas = document.getElementById('processCanvas');
+        
+        const processCanvas = document.getElementById('processCanvas');
+        const processCtx = processCanvas.getContext('2d', { willReadFrequently: true });
+        
         const originalCanvas = document.getElementById('originalCanvas');
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
         const originalCtx = originalCanvas.getContext('2d');
+        
         const asciiOutput = document.getElementById('asciiOutput');
         
-        let isPlaying = false, animationId = null, currentMode = 'file';
-        let invertBrightness = false, lastFrameTime = 0, frameCount = 0;
+        const displayCanvas = document.getElementById('asciiDisplayCanvas');
+        const displayCtx = displayCanvas.getContext('2d');
         
-        // Fixed Syntax Error Here
+        let isPlaying = false, animationId = null, currentMode = 'file';
+        let invertBrightness = false, isFullColor = false;
+        let lastFrameTime = 0, frameCount = 0;
+        let currentAsciiText = ''; // Stores text string for copying/exporting
+        
+        let cachedCharWidth = 0;
+        let lastFontSize = 0;
+
         const charsets = {
             standard: ' .:-=+*#%@',
             detailed: " .'`^\",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$",
@@ -360,6 +381,21 @@
         };
 
         let activeCharsetStr = charsets.standard;
+
+        function toggleFullColor() {
+            isFullColor = !isFullColor;
+            document.getElementById('colorToggle').classList.toggle('active', isFullColor);
+            
+            if (isFullColor) {
+                asciiOutput.style.display = 'none';
+                displayCanvas.style.display = 'block';
+                document.getElementById('paletteGroup').classList.add('disabled');
+            } else {
+                asciiOutput.style.display = 'block';
+                displayCanvas.style.display = 'none';
+                document.getElementById('paletteGroup').classList.remove('disabled');
+            }
+        }
 
         function setMode(mode, btn) {
             currentMode = mode;
@@ -386,10 +422,12 @@
             document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
             btn.classList.add('active');
             if (view === 'ascii') {
-                asciiOutput.style.display = 'block';
+                if (isFullColor) displayCanvas.style.display = 'block';
+                else asciiOutput.style.display = 'block';
                 originalCanvas.classList.remove('visible');
             } else {
                 asciiOutput.style.display = 'none';
+                displayCanvas.style.display = 'none';
                 originalCanvas.classList.add('visible');
             }
         }
@@ -398,15 +436,14 @@
             document.getElementById('widthValue').textContent = document.getElementById('widthSlider').value;
             const fontVal = document.getElementById('fontSlider').value + 'px';
             document.getElementById('fontValue').textContent = fontVal;
+            
             asciiOutput.style.fontSize = fontVal;
             asciiOutput.style.lineHeight = fontVal;
 
-            // Pre-calculate Charset for Massive Performance Boost!
             let sel = charsets[document.getElementById('charsetSelect').value];
             activeCharsetStr = invertBrightness ? sel.split('').reverse().join('') : sel;
         }
 
-        // Drag and drop setup
         const dropZone = document.getElementById('dropZone');
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => dropZone.addEventListener(e, ev => ev.preventDefault()));
         ['dragenter', 'dragover'].forEach(e => dropZone.addEventListener(e, () => dropZone.classList.add('dragover')));
@@ -419,7 +456,7 @@
         function handleFileSelect(event) {
             const file = event.target.files[0];
             if (file) loadVideo(file);
-            event.target.value = ''; // Reset input
+            event.target.value = ''; 
         }
 
         function loadVideo(file) {
@@ -466,7 +503,6 @@
 
         async function startWebcam() {
             try {
-                // Fixed hardcoded constraints that crash on older webcams
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 } } });
                 webcamVideo.srcObject = stream;
                 webcamVideo.onloadedmetadata = () => {
@@ -488,7 +524,6 @@
             }
         }
 
-        // Heavy Performance Optimization Done Here
         function renderFrame() {
             const source = currentMode === 'webcam' ? webcamVideo : video;
             if (!source.videoWidth || (currentMode === 'file' && video.paused && isPlaying==false)) {
@@ -501,34 +536,97 @@
                 frameCount = 0; lastFrameTime = now;
             }
 
-            const width = parseInt(document.getElementById('widthSlider').value);
-            // Multiplier fixed to offset default font height stretching
-            const height = Math.floor(width * (source.videoHeight / source.videoWidth) * 0.45);
-
-            canvas.width = width; canvas.height = height;
-            ctx.drawImage(source, 0, 0, width, height);
+            const fontSize = parseInt(document.getElementById('fontSlider').value);
             
-            // Draw to original view canvas as well
+            // Re-calculate Text Dimensions when font size changes
+            if (fontSize !== lastFontSize || !cachedCharWidth) {
+                displayCtx.font = `bold ${fontSize}px "JetBrains Mono", monospace`;
+                cachedCharWidth = displayCtx.measureText('M').width;
+                lastFontSize = fontSize;
+            }
+
+            const charWidth = cachedCharWidth;
+            const charHeight = fontSize;
+            
+            // Precise Aspect Ratio Calculation
+            const fontAspectRatio = charWidth / charHeight;
+            const width = parseInt(document.getElementById('widthSlider').value);
+            const height = Math.floor(width * (source.videoHeight / source.videoWidth) * fontAspectRatio);
+
+            // Draw Source Frame to Hidden Processing Canvas
+            processCanvas.width = width; processCanvas.height = height;
+            processCtx.drawImage(source, 0, 0, width, height);
+            
             if (originalCanvas.classList.contains('visible')) {
                 originalCtx.drawImage(source, 0, 0, originalCanvas.width, originalCanvas.height);
             }
 
-            const data = ctx.getImageData(0, 0, width, height).data;
+            const data = processCtx.getImageData(0, 0, width, height).data;
             const charLen = activeCharsetStr.length - 1;
-            let ascii = '';
+            
+            let asciiString = '';
+            let asciiRows = [];
 
+            // Loop to analyze brightness and build strings
             for (let y = 0; y < height; y++) {
+                let rowStr = '';
                 for (let x = 0; x < width; x++) {
                     const offset = (y * width + x) * 4;
-                    const brightness = 0.299 * data[offset] + 0.587 * data[offset + 1] + 0.114 * data[offset + 2];
+                    const r = data[offset];
+                    const g = data[offset + 1];
+                    const b = data[offset + 2];
+                    const brightness = 0.299 * r + 0.587 * g + 0.114 * b;
                     const index = Math.floor((brightness / 255) * charLen);
-                    ascii += activeCharsetStr[index];
+                    rowStr += activeCharsetStr[index];
                 }
-                ascii += '\n';
+                asciiRows.push(rowStr);
+                asciiString += rowStr + '\n';
             }
 
-            asciiOutput.textContent = ascii;
+            currentAsciiText = asciiString;
 
+            if (isFullColor) {
+                // Ensure Canvas scales exactly to our text columns/rows 
+                const expectedW = Math.ceil(width * charWidth);
+                const expectedH = height * charHeight;
+
+                if (displayCanvas.width !== expectedW || displayCanvas.height !== expectedH) {
+                    displayCanvas.width = expectedW;
+                    displayCanvas.height = expectedH;
+                }
+
+                // Changing Canvas size clears it, so we must reset the Font
+                displayCtx.font = `bold ${fontSize}px "JetBrains Mono", monospace`;
+                displayCtx.textBaseline = 'top';
+
+                // 1. Clear Frame entirely
+                displayCtx.clearRect(0, 0, displayCanvas.width, displayCanvas.height);
+
+                // 2. Draw Text Rows in Solid White
+                displayCtx.fillStyle = 'white';
+                for (let y = 0; y < height; y++) {
+                    displayCtx.fillText(asciiRows[y], 0, y * charHeight);
+                }
+
+                // 3. The Magic Mask Trick: Stretch Image *inside* the White Text Pixels
+                displayCtx.globalCompositeOperation = 'source-in';
+                displayCtx.imageSmoothingEnabled = false; // Prevents color bleeding
+                displayCtx.drawImage(processCanvas, 0, 0, displayCanvas.width, displayCanvas.height);
+
+                // 4. Fill Black Background Behind The Text
+                displayCtx.globalCompositeOperation = 'destination-over';
+                displayCtx.fillStyle = '#0c0c0e';
+                displayCtx.fillRect(0, 0, displayCanvas.width, displayCanvas.height);
+
+                // Reset
+                displayCtx.globalCompositeOperation = 'source-over';
+
+            } else {
+                // Standard Monochrome DOM Text Rendering
+                asciiOutput.textContent = asciiString;
+            }
+
+            // Stats & Scrubber
             document.getElementById('statResolution').textContent = `${width}×${height}`;
             document.getElementById('statChars').textContent = (width * height).toLocaleString();
 
@@ -542,14 +640,15 @@
         }
 
         function exportFrame() {
-            if (!asciiOutput.textContent) return showToast('Nothing to export');
+            if (!currentAsciiText) return showToast('Nothing to export');
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(new Blob([asciiOutput.textContent], { type: 'text/plain' }));
+            a.href = URL.createObjectURL(new Blob([currentAsciiText], { type: 'text/plain' }));
             a.download = `ascii-${Date.now()}.txt`; a.click();
         }
 
         function copyAscii() {
-            navigator.clipboard.writeText(asciiOutput.textContent).then(() => showToast('Copied to clipboard', 'success'));
+            if (!currentAsciiText) return showToast('Nothing to copy');
+            navigator.clipboard.writeText(currentAsciiText).then(() => showToast('Copied to clipboard', 'success'));
         }
 
         function showToast(msg, type = 'info') {
