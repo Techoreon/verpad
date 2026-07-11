@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Etymos | Advanced Etymological Dictionary</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        /* CSS Variables & Theming */
+        :root {
+            --bg-color: #fcfbf9;
+            --surface-color: #ffffff;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --accent-color: #9f1239;
+            --accent-hover: #e11d48;
+            --border-color: #e2e8f0;
+            --etymology-bg: #fff5f7;
+            --etymology-border: #fda4af;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --transition: all 0.3s ease;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1a202c;
+            --surface-color: #2d3748;
+            --text-primary: #f7fafc;
+            --text-secondary: #a0aec0;
+            --accent-color: #fb7185;
+            --accent-hover: #f43f5e;
+            --border-color: #4a5568;
+            --etymology-bg: #37282b;
+            --etymology-border: #9f1239;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: var(--transition);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Typography */
+        h1, h2, h3, .serif {
+            font-family: 'Crimson Pro', serif;
+        }
+
+        /* Header */
+        header {
+            padding: 2rem 1rem;
+            text-align: center;
+            background-color: var(--surface-color);
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            margin-bottom: 0.5rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Search Bar */
+        .search-container {
+            max-width: 600px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            padding-right: 3.5rem;
+            font-size: 1.1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 50px;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            transition: var(--transition);
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 4px rgba(159, 18, 57, 0.1);
+        }
+
+        .search-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .search-btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .theme-toggle:hover {
+            color: var(--accent-color);
+        }
+
+        /* Main Content Area */
+        main {
+            flex: 1;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 2rem 1rem;
+        }
+
+        /* Loading State */
+        .loader-container {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 4rem 0;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Result Section */
+        #result-container {
+            display: none;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .word-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .word-title {
+            font-size: 3.5rem;
+            color: var(--text-primary);
+            line-height: 1.1;
+        }
+
+        .phonetics-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .phonetic-text {
+            font-size: 1.25rem;
+            color: var(--accent-color);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .audio-btn {
+            background: rgba(159, 18, 57, 0.1);
+            color: var(--accent-color);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        [data-theme="dark"] .audio-btn {
+            background: rgba(251, 113, 133, 0.15);
+        }
+
+        .audio-btn:hover {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        /* Etymology Section */
+        .etymology-card {
+            background-color: var(--etymology-bg);
+            border-left: 4px solid var(--etymology-border);
+            padding: 2rem;
+            border-radius: 0 var(--radius) var(--radius) 0;
+            margin-bottom: 2.5rem;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .etymology-card::before {
+            content: '🏛️';
+            position: absolute;
+            right: -20px;
+            bottom: -30px;
+            font-size: 8rem;
+            opacity: 0.05;
+            filter: grayscale(100%);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .etymology-content {
+            font-family: 'Crimson Pro', serif;
+            font-size: 1.2rem;
+            line-height: 1.8;
+            color: var(--text-primary);
+        }
+
+        .etymology-subheader {
+            display: inline-block;
+            background-color: var(--accent-color);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Wiktionary styling cleanup */
+        .etymology-content a {
+            color: var(--accent-color);
+            text-decoration: none;
+            border-bottom: 1px dashed var(--accent-color);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+        .etymology-content a:hover {
+            background-color: rgba(159, 18, 57, 0.1);
+        }
+        .etymology-content ul, .etymology-content ol {
+            margin-left: 1.5rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .etymology-content p {
+            margin-bottom: 0.75rem;
+        }
+        .etymology-content .mw-editsection,
+        .etymology-content sup.reference {
+            display: none !important;
+        }
+
+        /* Definitions Section */
+        .pos-group {
+            margin-bottom: 2rem;
+        }
+
+        .pos-title {
+            font-size: 1.25rem;
+            font-style: italic;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+            position: relative;
+            display: inline-block;
+        }
+
+        .pos-title::after {
+            content: '';
+            position: absolute;
+            bottom: 4px;
+            left: 0;
+            width: 100%;
+            height: 8px;
+            background-color: rgba(159, 18, 57, 0.1);
+            z-index: -1;
+        }
+
+        .definition-list {
+            list-style: none;
+            margin-left: 1rem;
+        }
+
+        .definition-item {
+            position: relative;
+            margin-bottom: 1.25rem;
+            padding-left: 1.5rem;
+        }
+
+        .definition-item::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: var(--accent-color);
+            font-weight: bold;
+            font-size: 1.5rem;
+            line-height: 1;
+        }
+
+        .definition-text {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+        }
+
+        .example-text {
+            display: block;
+            margin-top: 0.5rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* Synonyms / Antonyms */
+        .tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .tag {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 0.2rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .tag:hover {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        /* Empty / Error State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 1rem;
+            color: var(--text-secondary);
+        }
+        
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .word-title { font-size: 2.5rem; }
+            .etymology-card { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <button class="theme-toggle" id="themeToggle" title="Toggle Dark/Light Mode">🌙</button>
+        <div class="logo serif">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+            Etymos
+        </div>
+        <div class="subtitle">Trace the roots. Understand the meaning.</div>
+        
+        <div class="search-container">
+            <form id="searchForm">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search a word (e.g., serendipity, serendipitous)..." autocomplete="off" required>
+                <button type="submit" class="search-btn" title="Search">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </button>
+            </form>
+        </div>
+    </header>
+
+    <main>
+        <!-- Initial / Empty State -->
+        <div id="empty-state" class="empty-state">
+            <div class="empty-icon">🌱</div>
+            <h2 class="serif">Discover the origins of language</h2>
+            <p>Enter an English word above to explore its deep etymological history and current definitions.</p>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loader" class="loader-container">
+            <div class="spinner"></div>
+            <p class="serif" style="color: var(--text-secondary); font-style: italic;">Unearthing ancient roots...</p>
+        </div>
+
+        <!-- Content State -->
+        <div id="result-container">
+            <div class="word-header">
+                <h1 id="word-title" class="word-title serif"></h1>
+                <div class="phonetics-container">
+                    <span id="phonetic-text" class="phonetic-text"></span>
+                    <button id="audio-btn" class="audio-btn" style="display: none;" title="Listen to pronunciation">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Etymology Focus -->
+            <div id="etymology-section" class="etymology-card" style="display: none;">
+                <h2 class="section-title serif">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    Etymology
+                </h2>
+                <div id="etymology-content" class="etymology-content"></div>
+            </div>
+
+            <!-- Definitions Focus -->
+            <div id="definitions-section">
+                <h2 class="section-title serif">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                    Definitions
+                </h2>
+                <div id="definitions-content"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- Theming Logic ---
+        const themeToggle = document.getElementById('themeToggle');
+        const rootElement = document.documentElement;
+        
+        if(localStorage.getItem('theme') === 'dark') {
+            rootElement.setAttribute('data-theme', 'dark');
+            themeToggle.textContent = '☀️';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = rootElement.getAttribute('data-theme');
+            if (currentTheme === 'dark') {
+                rootElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+                themeToggle.textContent = '🌙';
+            } else {
+                rootElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+                themeToggle.textContent = '☀️';
+            }
+        });
+
+        // --- DOM Elements ---
+        const searchForm = document.getElementById('searchForm');
+        const searchInput = document.getElementById('searchInput');
+        const emptyState = document.getElementById('empty-state');
+        const loader = document.getElementById('loader');
+        const resultContainer = document.getElementById('result-container');
+        
+        const wordTitle = document.getElementById('word-title');
+        const phoneticText = document.getElementById('phonetic-text');
+        const audioBtn = document.getElementById('audio-btn');
+        
+        const etymologySection = document.getElementById('etymology-section');
+        const etymologyContent = document.getElementById('etymology-content');
+        const definitionsSection = document.getElementById('definitions-section');
+        const definitionsContent = document.getElementById('definitions-content');
+
+        let currentAudio = null;
+
+        // --- Search Event ---
+        searchForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const word = searchInput.value.trim();
+            if (word) searchWord(word);
+        });
+
+        // Intercept link clicks in Etymology to trigger in-app searches
+        etymologyContent.addEventListener('click', (e) => {
+            const link = e.target.closest('a');
+            if (link && link.getAttribute('href').startsWith('/wiki/')) {
+                e.preventDefault();
+                let word = link.getAttribute('href').replace('/wiki/', '');
+                word = decodeURIComponent(word.split('#')[0]); // Clean hashes and decode
+                searchInput.value = word;
+                searchWord(word);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+
+        // Function allowing external tag clicks to search
+        window.searchTag = function(word) {
+            searchInput.value = word;
+            searchWord(word);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // --- Main Fetch Logic ---
+        async function searchWord(word) {
+            emptyState.style.display = 'none';
+            resultContainer.style.display = 'none';
+            loader.style.display = 'flex';
+            if(currentAudio) { currentAudio.pause(); currentAudio = null; }
+            audioBtn.style.display = 'none';
+
+            try {
+                // Fetch dictionary definitions and Wiktionary raw HTML simultaneously 
+                const [dictResponse, wikiResponse] = await Promise.allSettled([
+                    fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`),
+                    fetch(`https://en.wiktionary.org/w/api.php?action=parse&page=${encodeURIComponent(word)}&prop=text&format=json&origin=*`)
+                ]);
+
+                let dictData = null;
+                let wikiHTML = null;
+
+                if (dictResponse.status === 'fulfilled' && dictResponse.value.ok) {
+                    const data = await dictResponse.value.json();
+                    dictData = data[0]; 
+                }
+
+                if (wikiResponse.status === 'fulfilled' && wikiResponse.value.ok) {
+                    const data = await wikiResponse.value.json();
+                    if (data.parse && data.parse.text) {
+                        wikiHTML = data.parse.text['*'];
+                    }
+                }
+
+                if (!dictData && !wikiHTML) {
+                    throw new Error("Word not found.");
+                }
+
+                renderResults(word, dictData, wikiHTML);
+
+            } catch (error) {
+                loader.style.display = 'none';
+                emptyState.style.display = 'block';
+                emptyState.innerHTML = `
+                    <div class="empty-icon">🔍</div>
+                    <h2 class="serif">Word not found</h2>
+                    <p>We couldn't trace the roots or definition of "<strong>${word}</strong>". It might be misspelled or unavailable.</p>
+                `;
+            }
+        }
+
+        // --- Render Logic ---
+        function renderResults(searchedWord, dictData, wikiHTML) {
+            loader.style.display = 'none';
+            resultContainer.style.display = 'block';
+
+            // 1. Header setup
+            wordTitle.textContent = dictData ? dictData.word : searchedWord;
+            phoneticText.textContent = '';
+            
+            if (dictData && dictData.phonetics) {
+                const phonetic = dictData.phonetics.find(p => p.text);
+                if (phonetic) phoneticText.textContent = phonetic.text;
+
+                const audioObj = dictData.phonetics.find(p => p.audio && p.audio.length > 0);
+                if (audioObj) {
+                    currentAudio = new Audio(audioObj.audio);
+                    audioBtn.style.display = 'flex';
+                    audioBtn.onclick = () => currentAudio.play();
+                }
+            } else if (dictData && dictData.phonetic) {
+                phoneticText.textContent = dictData.phonetic;
+            }
+
+            // 2. Etymology (Advanced DOM Parsing)
+            etymologyContent.innerHTML = '';
+            etymologySection.style.display = 'none';
+
+            if (wikiHTML) {
+                const etymologyText = extractEtymology(wikiHTML);
+                if (etymologyText) {
+                    etymologyContent.innerHTML = etymologyText;
+                    etymologySection.style.display = 'block';
+                }
+            }
+
+            // 3. Definitions
+            definitionsContent.innerHTML = '';
+            if (dictData && dictData.meanings && dictData.meanings.length > 0) {
+                definitionsSection.style.display = 'block';
+                
+                dictData.meanings.forEach(meaning => {
+                    const posGroup = document.createElement('div');
+                    posGroup.className = 'pos-group';
+                    
+                    const posTitle = document.createElement('h3');
+                    posTitle.className = 'pos-title serif';
+                    posTitle.textContent = meaning.partOfSpeech;
+                    posGroup.appendChild(posTitle);
+
+                    const defBox = document.createElement('ul');
+                    defBox.className = 'definition-list';
+
+                    meaning.definitions.forEach((def, index) => {
+                        if (index > 4) return; // Top 5 limits to keep clean UI
+                        const li = document.createElement('li');
+                        li.className = 'definition-item';
+                        
+                        let html = `<span class="definition-text">${def.definition}</span>`;
+                        if (def.example) {
+                            html += `<span class="example-text">"${def.example}"</span>`;
+                        }
+                        li.innerHTML = html;
+                        defBox.appendChild(li);
+                    });
+                    posGroup.appendChild(defBox);
+
+                    // Synonyms handling
+                    if (meaning.synonyms && meaning.synonyms.length > 0) {
+                        const synContainer = document.createElement('div');
+                        synContainer.style.marginTop = '1rem';
+                        synContainer.innerHTML = `<span style="color: var(--text-secondary); font-size: 0.9rem; margin-right: 0.5rem;">Synonyms:</span>`;
+                        const tagList = document.createElement('div');
+                        tagList.className = 'tag-list';
+                        
+                        meaning.synonyms.slice(0, 6).forEach(syn => {
+                            const tag = document.createElement('span');
+                            tag.className = 'tag';
+                            tag.textContent = syn;
+                            tag.onclick = () => searchTag(syn);
+                            tagList.appendChild(tag);
+                        });
+                        synContainer.appendChild(tagList);
+                        posGroup.appendChild(synContainer);
+                    }
+                    definitionsContent.appendChild(posGroup);
+                });
+            } else {
+                definitionsSection.style.display = 'none';
+                if(!wikiHTML || etymologySection.style.display === 'none') {
+                    resultContainer.style.display = 'none';
+                    emptyState.style.display = 'block';
+                    emptyState.innerHTML = `<h2 class="serif">No definitions found.</h2>`;
+                }
+            }
+        }
+
+        // --- NEW: Robust MediaWiki DOM Parser ---
+        function extractEtymology(htmlString) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlString, 'text/html');
+            
+            // Find all etymology-related elements (ID = Etymology, Etymology_1, etc.)
+            const etymologyHeaders = Array.from(doc.querySelectorAll('[id^="Etymology"]'));
+            
+            if (etymologyHeaders.length === 0) return null;
+
+            let resultHTML = '';
+
+            etymologyHeaders.forEach(header => {
+                // MediaWiki wraps headings in `.mw-heading` divs now, but handle old formats just in case
+                let headingElement = header.tagName.match(/^H\d$/) ? header : header.closest('h1, h2, h3, h4, h5, h6');
+                if (!headingElement) return; 
+                
+                let headerContainer = headingElement.closest('.mw-heading') || headingElement;
+
+                // Make sure this belongs to the 'English' section
+                let isEnglish = false;
+                let foundH2 = false;
+                let prev = headerContainer.previousElementSibling;
+                
+                // Traverse backward siblings to find the nearest H2 (Language header)
+                while (prev) {
+                    if (prev.tagName === 'H2' || (prev.classList && prev.classList.contains('mw-heading2'))) {
+                        const h2 = prev.tagName === 'H2' ? prev : prev.querySelector('h2');
+                        const h2Id = h2 ? h2.id : '';
+                        const hasEnglishSpan = h2 ? !!h2.querySelector('[id="English"]') : false;
+                        
+                        if (h2Id === 'English' || hasEnglishSpan) {
+                            isEnglish = true;
+                        }
+                        foundH2 = true;
+                        break;
+                    }
+                    prev = prev.previousElementSibling;
+                }
+
+                // If no language header was found before it, it's likely the only language on the page.
+                if (!foundH2) isEnglish = true; 
+                if (!isEnglish) return; 
+
+                // Inject a beautiful sub-header for multiple etymologies (e.g. "Etymology 1")
+                if (header.id !== 'Etymology') {
+                    let label = header.textContent.replace(/\[edit\]/g, '').trim();
+                    resultHTML += `<div class="etymology-subheader">${label}</div>`;
+                }
+
+                // Now traverse forward to collect all text/paragraphs until the next equivalent heading
+                const startLevel = parseInt(headingElement.tagName.replace('H', '')) || 3;
+                let curr = headerContainer.nextElementSibling;
+
+                while (curr) {
+                    let isHeading = false;
+                    let level = 10;
+                    
+                    if (curr.tagName && curr.tagName.match(/^H\d$/)) {
+                        isHeading = true;
+                        level = parseInt(curr.tagName.replace('H', ''));
+                    } else if (curr.classList && curr.classList.contains('mw-heading')) {
+                        isHeading = true;
+                        const hTag = curr.querySelector('h1, h2, h3, h4, h5, h6');
+                        if (hTag) level = parseInt(hTag.tagName.replace('H', ''));
+                    }
+
+                    // Stop parsing if we hit a heading of equal or higher hierarchy (e.g. Pronunciation, Noun, New Language)
+                    if (isHeading && level <= startLevel) {
+                        break;
+                    }
+
+                    // Collect the HTML while skipping garbage elements
+                    if (!['STYLE', 'LINK', 'TABLE'].includes(curr.tagName) && !(curr.classList && curr.classList.contains('toc'))) {
+                        let cleanNode = curr.cloneNode(true);
+                        
+                        // Strip out Wikipedia [edit] links and citation [1] references
+                        cleanNode.querySelectorAll('.mw-editsection, sup.reference').forEach(e => e.remove());
+                        resultHTML += cleanNode.outerHTML;
+                    }
+                    curr = curr.nextElementSibling;
+                }
+            });
+
+            return resultHTML === '' ? null : resultHTML;
+        }
+
+        window.onload = () => { searchInput.focus(); };
+    </script>
+</body>
+</html>
