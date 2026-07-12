@@ -198,8 +198,10 @@
 
 <script>
 (function(){
+  const STORAGE_KEY = "noteTreeSaver_v1";
   const uid = () => Math.random().toString(36).slice(2,10);
-  let data = {
+
+  const defaultData = {
     items: [
       { id: "r1", type: "folder", name: "Class 12", open: true, children: [
         { id: "r2", type: "folder", name: "Physics", open: true, children: [
@@ -219,6 +221,19 @@
       ]}
     ]
   };
+
+  function loadData() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch(e) {}
+    return JSON.parse(JSON.stringify(defaultData));
+  }
+  function saveData() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(e) {}
+  }
+
+  let data = loadData();
   let activeId = null;
   let modalCallback = null;
   let modalTargetId = null;
@@ -311,17 +326,17 @@
     },
     toggle(id) {
       const it = findItem(id, data.items);
-      if (it && it.type === "folder") { it.open = !it.open; renderTree(); }
+      if (it && it.type === "folder") { it.open = !it.open; saveData(); renderTree(); }
     },
     onTitleChange() {
       if (!activeId) return;
       const it = findItem(activeId, data.items);
-      if (it) { it.name = $("noteTitle").value; renderTree(); $("saveStatus").textContent = "Unsaved"; }
+      if (it) { it.name = $("noteTitle").value; saveData(); renderTree(); $("saveStatus").textContent = "Unsaved"; }
     },
     onEditorInput() {
       if (!activeId) return;
       const it = findItem(activeId, data.items);
-      if (it) { it.content = $("editor").innerHTML; updateWordCount(); $("saveStatus").textContent = "Unsaved"; }
+      if (it) { it.content = $("editor").innerHTML; saveData(); updateWordCount(); $("saveStatus").textContent = "Unsaved"; }
     },
     format(cmd, val) {
       document.execCommand(cmd, false, val || null);
@@ -342,6 +357,7 @@
       $("editor").focus();
     },
     save() {
+      saveData();
       $("saveStatus").textContent = "Saved";
       setTimeout(() => $("saveStatus").textContent = "All changes saved", 1200);
     },
@@ -355,7 +371,7 @@
         } else {
           data.items.push(newFolder);
         }
-        renderTree();
+        saveData(); renderTree();
       };
       $("modalTitle").textContent = "New folder";
       $("modalInput").value = "";
@@ -370,14 +386,14 @@
       if (parent) parent.open = true;
       const newNote = { id: uid(), type: "note", name: "Untitled note", content: "" };
       list.push(newNote);
-      renderTree();
+      saveData(); renderTree();
       this.select(newNote.id);
     },
     rename(id) {
       const it = findItem(id, data.items);
       if (!it) return;
       modalTargetId = id;
-      modalCallback = (name) => { it.name = name; renderTree(); if (activeId === id) $("noteTitle").value = name; };
+      modalCallback = (name) => { it.name = name; saveData(); renderTree(); if (activeId === id) $("noteTitle").value = name; };
       $("modalTitle").textContent = "Rename";
       $("modalInput").value = it.name;
       $("modalInput").placeholder = "Name";
@@ -388,7 +404,7 @@
       if (!confirm("Delete this item?")) return;
       if (activeId === id) { activeId = null; $("emptyState").style.display = "flex"; $("editorWrap").style.display = "none"; }
       removeItem(id, data.items);
-      renderTree();
+      saveData(); renderTree();
     },
     search(term) {
       searchTerm = term;
