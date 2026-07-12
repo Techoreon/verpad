@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Note Tree Saver</title>
+<style>
+  :root {
+    --text-primary: #1a1a1a;
+    --text-secondary: #4a4a4a;
+    --text-tertiary: #888;
+    --text-quaternary: #bbb;
+    --surface: #fff;
+    --surface-muted: #f7f7f8;
+    --surface-raised: #fff;
+    --surface-strong: #ececf1;
+    --border: #e5e5e5;
+    --accent: #2563eb;
+    --danger: #dc2626;
+    --positive: #16a34a;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "SF Mono", "Fira Code", "JetBrains Mono", Consolas, monospace;
+    --t-fast: 120ms;
+    --ease-out: cubic-bezier(0,0,0.2,1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --text-primary: #ececf1;
+      --text-secondary: #acacbe;
+      --text-tertiary: #6e6e80;
+      --text-quaternary: #4a4a5a;
+      --surface: #1e1e2e;
+      --surface-muted: #16161e;
+      --surface-raised: #252535;
+      --surface-strong: #2a2a3a;
+      --border: #3a3a4a;
+      --accent: #60a5fa;
+      --danger: #f87171;
+      --positive: #4ade80;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--font-sans); background: var(--surface-muted); color: var(--text-primary); height: 100vh; overflow: hidden; }
+  button, input, select, textarea { font: inherit; }
+
+  .nts-wrap { display: flex; height: 100vh; border: 1px solid var(--border); overflow: hidden; }
+  .nts-sidebar { width: 280px; min-width: 220px; border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--surface-muted); }
+  .nts-sidebar-head { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .nts-sidebar-head h3 { margin: 0; font-size: 15px; font-weight: 500; color: var(--text-primary); }
+  .nts-search { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  .nts-search input { width: 100%; padding: 7px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--surface); color: var(--text-primary); outline: none; }
+  .nts-search input:focus { border-color: var(--text-primary); }
+  .nts-tree { flex: 1; overflow-y: auto; padding: 8px 0; }
+  .nts-tree-item { display: flex; align-items: center; gap: 4px; padding: 6px 12px; cursor: pointer; border-radius: 6px; margin: 0 8px; font-size: 13px; color: var(--text-secondary); transition: background var(--t-fast) var(--ease-out); position: relative; }
+  .nts-tree-item:hover { background: var(--surface-raised); }
+  .nts-tree-item.active { background: var(--surface-strong); color: var(--text-primary); font-weight: 500; }
+  .nts-tree-item .chev { width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; transition: transform var(--t-fast) var(--ease-out); color: var(--text-tertiary); flex-shrink: 0; }
+  .nts-tree-item .chev.collapsed { transform: rotate(-90deg); }
+  .nts-tree-item .icon { width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--text-tertiary); }
+  .nts-tree-item.active .icon { color: var(--text-primary); }
+  .nts-tree-item .label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nts-tree-item .row-actions { opacity: 0; transition: opacity var(--t-fast) var(--ease-out); display: flex; gap: 2px; }
+  .nts-tree-item:hover .row-actions, .nts-tree-item:focus-within .row-actions { opacity: 1; }
+  .nts-btn-icon { width: 22px; height: 22px; border: none; background: transparent; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; color: var(--text-tertiary); padding: 0; }
+  .nts-btn-icon:hover { background: var(--surface-strong); color: var(--text-primary); }
+  .nts-btn-icon svg { width: 14px; height: 14px; }
+  .nts-main { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--surface); }
+  .nts-toolbar { padding: 10px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; background: var(--surface); }
+  .nts-toolbar .sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+  .nts-toolbar-btn { padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text-secondary); font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+  .nts-toolbar-btn:hover { background: var(--surface-raised); color: var(--text-primary); }
+  .nts-toolbar-btn.active { background: var(--surface-strong); color: var(--text-primary); border-color: var(--text-quaternary); }
+  .nts-titlebar { padding: 14px 16px 6px; display: flex; align-items: center; gap: 8px; }
+  .nts-titlebar input { flex: 1; font-size: 22px; font-weight: 500; border: none; outline: none; background: transparent; color: var(--text-primary); }
+  .nts-titlebar input::placeholder { color: var(--text-quaternary); }
+  .nts-editor-wrap { flex: 1; padding: 0 16px 16px; overflow-y: auto; }
+  .nts-editor { min-height: calc(100vh - 200px); padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-muted); color: var(--text-primary); font-size: 15px; line-height: 1.75; outline: none; }
+  .nts-editor blockquote { border-left: 3px solid var(--border); margin: 10px 0; padding-left: 14px; color: var(--text-secondary); }
+  .nts-editor pre { background: var(--surface-strong); padding: 10px 14px; border-radius: 8px; font-family: var(--font-mono); font-size: 13px; overflow-x: auto; }
+  .nts-editor code { font-family: var(--font-mono); font-size: 13px; background: var(--surface-strong); padding: 2px 5px; border-radius: 4px; }
+  .nts-editor ul, .nts-editor ol { padding-left: 26px; }
+  .nts-editor h1 { font-size: 24px; margin: 10px 0; font-weight: 500; }
+  .nts-editor h2 { font-size: 20px; margin: 10px 0; font-weight: 500; }
+  .nts-editor h3 { font-size: 17px; margin: 10px 0; font-weight: 500; }
+  .nts-editor a { color: var(--accent); text-decoration: underline; }
+  .nts-editor img { max-width: 100%; border-radius: 8px; }
+  .nts-status { padding: 8px 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-quaternary); display: flex; justify-content: space-between; align-items: center; background: var(--surface); }
+  .nts-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-quaternary); gap: 14px; }
+  .nts-empty svg { width: 56px; height: 56px; opacity: 0.35; }
+  .nts-empty p { margin: 0; font-size: 15px; }
+  .nts-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .nts-modal-overlay.open { display: flex; }
+  .nts-modal { background: var(--surface-raised); border: 1px solid var(--border); border-radius: 12px; padding: 22px; width: 340px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+  .nts-modal h4 { margin: 0 0 14px; font-size: 16px; font-weight: 500; }
+  .nts-modal input { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; margin-bottom: 16px; background: var(--surface); color: var(--text-primary); outline: none; }
+  .nts-modal input:focus { border-color: var(--text-primary); }
+  .nts-modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  .nts-modal-btn { padding: 7px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary); }
+  .nts-modal-btn.primary { background: var(--text-primary); color: var(--surface); border-color: var(--text-primary); }
+  .nts-modal-btn:hover { opacity: 0.9; }
+  .nts-ctx-menu { position: absolute; background: var(--surface-raised); border: 1px solid var(--border); border-radius: 8px; padding: 4px; min-width: 150px; box-shadow: 0 4px 20px rgba(0,0,0,0.12); z-index: 50; display: none; }
+  .nts-ctx-menu.open { display: block; }
+  .nts-ctx-item { padding: 7px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+  .nts-ctx-item:hover { background: var(--surface-muted); color: var(--text-primary); }
+  .nts-ctx-item.danger { color: var(--danger); }
+  .nts-ctx-item.danger:hover { background: rgba(220,38,38,0.08); }
+  .nts-ctx-item svg { width: 14px; height: 14px; }
+  @media (max-width: 700px) {
+    .nts-sidebar { width: 200px; min-width: 180px; }
+    .nts-toolbar-btn span { display: none; }
+  }
+</style>
+<base target="_blank">
+</head>
+<body>
+
+<div class="nts-wrap" id="ntsApp">
+  <div class="nts-sidebar">
+    <div class="nts-sidebar-head">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="color:var(--text-primary);flex-shrink:0"><path d="M9.2373 3.7002C10.4169 3.7002 11.5297 4.24779 12.249 5.18262L12.4424 5.43359H18C20.0987 5.43359 21.7998 7.13472 21.7998 9.2334V16.5C21.7998 18.5987 20.0987 20.2998 18 20.2998H6C3.90132 20.2998 2.2002 18.5987 2.2002 16.5V7.5C2.2002 5.40132 3.90132 3.7002 6 3.7002H9.2373ZM6 5.5C4.89543 5.5 4 6.39543 4 7.5V16.5C4 17.6046 4.89543 18.5 6 18.5H18C19.0357 18.5 19.887 17.7128 19.9893 16.7041L20 16.5V9.2334C20 8.19775 19.2128 7.34641 18.2041 7.24414L18 7.2334H12.0479L11.9326 7.22656C11.666 7.19561 11.4205 7.05812 11.2549 6.84277L10.8223 6.28027C10.4437 5.78834 9.85808 5.5 9.2373 5.5H6Z" fill="currentColor"/></svg>
+      <h3>Note Library</h3>
+      <button class="nts-btn-icon" style="margin-left:auto" onclick="app.addFolder()" title="New folder">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12.0684 2.03418C12.5654 2.03421 12.9687 2.43755 12.9688 2.93457V11.0996H21.0654C21.5625 11.0996 21.9658 11.503 21.9658 12C21.9658 12.497 21.5625 12.9004 21.0654 12.9004H12.9688V21.0654C12.9687 21.5624 12.5654 21.9658 12.0684 21.9658C11.5713 21.9658 11.168 21.5625 11.168 21.0654V12.9004H2.93457C2.43751 12.9004 2.03418 12.4971 2.03418 12C2.03418 11.5029 2.43751 11.0996 2.93457 11.0996H11.168V2.93457C11.168 2.43753 11.5713 2.03418 12.0684 2.03418Z" fill="currentColor"/></svg>
+      </button>
+      <button class="nts-btn-icon" onclick="app.addNote()" title="New note">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M15.4795 15.4971C15.9765 15.4971 16.3799 15.9004 16.3799 16.3975C16.3799 16.8945 15.9765 17.2978 15.4795 17.2979H8.52051C8.02345 17.2979 7.62012 16.8945 7.62012 16.3975C7.62012 15.9004 8.02345 15.4971 8.52051 15.4971H15.4795Z" fill="currentColor"/><path d="M12.3359 11.0996C12.8329 11.0997 13.2354 11.503 13.2354 12C13.2354 12.497 12.8329 12.9003 12.3359 12.9004H8.52051C8.02345 12.9004 7.62012 12.4971 7.62012 12C7.62012 11.5029 8.02345 11.0996 8.52051 11.0996H12.3359Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M13.1719 2.09961C13.9408 2.09969 14.6789 2.40555 15.2227 2.94922L19.0508 6.77734C19.5946 7.32113 19.9003 8.05911 19.9004 8.82812V18C19.9004 20.1539 18.1539 21.9004 16 21.9004H8C5.84626 21.9002 4.09961 20.1538 4.09961 18V6C4.09961 3.84621 5.84626 2.09981 8 2.09961H13.1719ZM8 3.90039C6.84037 3.90059 5.90039 4.84032 5.90039 6V18C5.90039 19.1597 6.84037 20.0994 8 20.0996H16C17.1598 20.0996 18.0996 19.1598 18.0996 18V9.90039H15C13.3985 9.90019 12.0996 8.6015 12.0996 7V3.90039H8ZM13.9004 7C13.9004 7.60739 14.3927 8.09941 15 8.09961H17.8213C17.8068 8.08333 17.7928 8.06626 17.7773 8.05078L13.9492 4.22266C13.9335 4.20696 13.9169 4.19237 13.9004 4.17773V7Z" fill="currentColor"/></svg>
+      </button>
+    </div>
+    <div class="nts-search">
+      <input type="text" id="searchInput" placeholder="Search notes..." oninput="app.search(this.value)">
+    </div>
+    <div class="nts-tree" id="treeRoot"></div>
+  </div>
+  <div class="nts-main" id="mainArea">
+    <div class="nts-empty" id="emptyState">
+      <svg viewBox="0 0 24 24" fill="none"><path fill-rule="evenodd" clip-rule="evenodd" d="M13.1719 2.09961C13.9408 2.09969 14.6789 2.40555 15.2227 2.94922L19.0508 6.77734C19.5946 7.32113 19.9003 8.05911 19.9004 8.82812V18C19.9004 20.1539 18.1539 21.9004 16 21.9004H8C5.84626 21.9002 4.09961 20.1538 4.09961 18V6C4.09961 3.84621 5.84626 2.09981 8 2.09961H13.1719ZM8 3.90039C6.84037 3.90059 5.90039 4.84032 5.90039 6V18C5.90039 19.1597 6.84037 20.0994 8 20.0996H16C17.1598 20.0996 18.0996 19.1598 18.0996 18V9.90039H15C13.3985 9.90019 12.0996 8.6015 12.0996 7V3.90039H8ZM13.9004 7C13.9004 7.60739 14.3927 8.09941 15 8.09961H17.8213C17.8068 8.08333 17.7928 8.06626 17.7773 8.05078L13.9492 4.22266C13.9335 4.20696 13.9169 4.19237 13.9004 4.17773V7Z" fill="currentColor"/></svg>
+      <p>Select a note to start writing</p>
+    </div>
+    <div id="editorWrap" style="display:none;flex-direction:column;height:100%">
+      <div class="nts-toolbar">
+        <button class="nts-toolbar-btn" onclick="app.format('bold')" title="Bold"><b>B</b></button>
+        <button class="nts-toolbar-btn" onclick="app.format('italic')" title="Italic"><i>I</i></button>
+        <button class="nts-toolbar-btn" onclick="app.format('underline')" title="Underline"><u>U</u></button>
+        <span class="sep"></span>
+        <button class="nts-toolbar-btn" onclick="app.format('formatBlock','H1')">H1</button>
+        <button class="nts-toolbar-btn" onclick="app.format('formatBlock','H2')">H2</button>
+        <button class="nts-toolbar-btn" onclick="app.format('formatBlock','H3')">H3</button>
+        <span class="sep"></span>
+        <button class="nts-toolbar-btn" onclick="app.format('insertUnorderedList')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M8.52051 15.4971H15.4795C15.9765 15.4971 16.3799 15.9004 16.3799 16.3975C16.3799 16.8945 15.9765 17.2978 15.4795 17.2979H8.52051C8.02345 17.2979 7.62012 16.8945 7.62012 16.3975C7.62012 15.9004 8.02345 15.4971 8.52051 15.4971Z" fill="currentColor"/><path d="M8.52051 11.0996H12.3359C12.8329 11.0997 13.2354 11.503 13.2354 12C13.2354 12.497 12.8329 12.9003 12.3359 12.9004H8.52051C8.02345 12.9004 7.62012 12.4971 7.62012 12C7.62012 11.5029 8.02345 11.0996 8.52051 11.0996Z" fill="currentColor"/><path d="M8.52051 6.7002H15.4795C15.9765 6.7002 16.3799 7.10354 16.3799 7.60059C16.3799 8.09765 15.9765 8.50098 15.4795 8.50098H8.52051C8.02345 8.50098 7.62012 8.09765 7.62012 7.60059C7.62012 7.10354 8.02345 6.7002 8.52051 6.7002Z" fill="currentColor"/><path d="M4.3999 7.60059C4.3999 8.18638 3.92529 8.66099 3.33936 8.66099C2.75342 8.66099 2.27881 8.18638 2.27881 7.60059C2.27881 7.0148 2.75342 6.54016 3.33936 6.54016C3.92529 6.54016 4.3999 7.0148 4.3999 7.60059Z" fill="currentColor"/><path d="M4.3999 12C4.3999 12.5858 3.92529 13.0604 3.33936 13.0604C2.75342 13.0604 2.27881 12.5858 2.27881 12C2.27881 11.4142 2.75342 10.9396 3.33936 10.9396C3.92529 10.9396 4.3999 11.4142 4.3999 12Z" fill="currentColor"/><path d="M4.3999 16.3975C4.3999 16.9833 3.92529 17.4579 3.33936 17.4579C2.75342 17.4579 2.27881 16.9833 2.27881 16.3975C2.27881 15.8117 2.75342 15.337 3.33936 15.337C3.92529 15.337 4.3999 15.8117 4.3999 16.3975Z" fill="currentColor"/></svg>
+        </button>
+        <button class="nts-toolbar-btn" onclick="app.format('insertOrderedList')">1.</button>
+        <span class="sep"></span>
+        <button class="nts-toolbar-btn" onclick="app.format('formatBlock','blockquote')">"</button>
+        <button class="nts-toolbar-btn" onclick="app.format('formatBlock','pre')">&lt;/&gt;</button>
+        <span class="sep"></span>
+        <button class="nts-toolbar-btn" onclick="app.undo()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3.53418 12.0005C3.53418 11.597 3.7793 11.235 4.14844 11.0786L4.26562 11.0356L10.2656 9.03564C10.8145 8.85205 11.4141 9.16064 11.5977 9.71045C11.7539 10.1714 11.543 10.6606 11.1562 10.9028L11.0508 10.9575L7.08984 12.0005H14.25C17.668 12.0005 20.4375 14.7701 20.4375 18.188C20.4375 18.6372 20.0742 19.0005 19.625 19.0005C19.1758 19.0005 18.8125 18.6372 18.8125 18.188C18.8125 15.6685 16.7695 13.6255 14.25 13.6255H5.89258L10.793 15.2612C11.3242 15.437 11.6172 16.019 11.4414 16.5503C11.2852 17.019 10.8359 17.3042 10.3516 17.2261L10.2422 17.1997L4.24219 15.1997C3.79688 15.0503 3.53125 14.6099 3.53418 14.1402V12.0005Z" fill="currentColor"/></svg>
+        </button>
+        <button class="nts-toolbar-btn" onclick="app.redo()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M20.4658 12.0005C20.4658 11.597 20.2207 11.235 19.8516 11.0786L19.7344 11.0356L13.7344 9.03564C13.1855 8.85205 12.5859 9.16064 12.4023 9.71045C12.2461 10.1714 12.457 10.6606 12.8438 10.9028L12.9492 10.9575L16.9102 12.0005H9.75C6.33203 12.0005 3.5625 14.7701 3.5625 18.188C3.5625 18.6372 3.92578 19.0005 4.375 19.0005C4.82422 19.0005 5.1875 18.6372 5.1875 18.188C5.1875 15.6685 7.23047 13.6255 9.75 13.6255H18.1074L13.207 15.2612C12.6758 15.437 12.3828 16.019 12.5586 16.5503C12.7148 17.019 13.1641 17.3042 13.6484 17.2261L13.7578 17.1997L19.7578 15.1997C20.2031 15.0503 20.4688 14.6099 20.4658 14.1402V12.0005Z" fill="currentColor"/></svg>
+        </button>
+        <span class="sep"></span>
+        <button class="nts-toolbar-btn" onclick="app.insertImage()" title="Insert image">IMG</button>
+        <button class="nts-toolbar-btn" onclick="app.insertLink()" title="Insert link">LINK</button>
+        <button class="nts-toolbar-btn" onclick="app.clearFormat()" title="Clear formatting">CLR</button>
+        <button class="nts-toolbar-btn" style="margin-left:auto" onclick="app.save()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M17.9542 4.77253C18.3056 4.42106 18.8761 4.42106 19.2276 4.77253C19.579 5.12401 19.579 5.69452 19.2276 6.04597L10.2735 15.0001C9.92205 15.3515 9.35156 15.3515 9.00012 15.0001L4.77252 10.7725C4.42104 10.4211 4.42104 9.85054 4.77252 9.49908C5.12399 9.14763 5.69448 9.14762 6.04595 9.49908L9.63678 13.0899L17.9542 4.77253Z" fill="currentColor"/></svg>
+          Save
+        </button>
+      </div>
+      <div class="nts-titlebar">
+        <input type="text" id="noteTitle" placeholder="Untitled note" oninput="app.onTitleChange()">
+      </div>
+      <div class="nts-editor-wrap">
+        <div class="nts-editor" id="editor" contenteditable="true" oninput="app.onEditorInput()"></div>
+      </div>
+      <div class="nts-status">
+        <span id="wordCount">0 words</span>
+        <span id="saveStatus">All changes saved</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="nts-modal-overlay" id="modal">
+  <div class="nts-modal">
+    <h4 id="modalTitle">New folder</h4>
+    <input type="text" id="modalInput" placeholder="Name...">
+    <div class="nts-modal-actions">
+      <button class="nts-modal-btn" onclick="app.closeModal()">Cancel</button>
+      <button class="nts-modal-btn primary" onclick="app.confirmModal()">Create</button>
+    </div>
+  </div>
+</div>
+
+<div class="nts-ctx-menu" id="ctxMenu"></div>
+
+<script>
+(function(){
+  const uid = () => Math.random().toString(36).slice(2,10);
+  let data = {
+    items: [
+      { id: "r1", type: "folder", name: "Class 12", open: true, children: [
+        { id: "r2", type: "folder", name: "Physics", open: true, children: [
+          { id: "n1", type: "note", name: "Electrostatics", content: "<h2>Electrostatics</h2><p>Coulomb's law describes the force between two point charges.</p><blockquote>F = k * q1 * q2 / r²</blockquote><p>Key concepts:</p><ul><li>Electric field</li><li>Gauss law</li><li>Potential</li></ul>" },
+          { id: "n2", type: "note", name: "Current Electricity", content: "<h2>Current Electricity</h2><p>Ohm's law: V = IR</p><p>Resistivity depends on temperature.</p>" },
+          { id: "n3", type: "note", name: "Magnetism", content: "<h2>Magnetism</h2><p>Magnetic force on a moving charge:</p><pre>F = q(v × B)</pre>" }
+        ]},
+        { id: "r3", type: "folder", name: "Chemistry", open: false, children: [
+          { id: "n4", type: "note", name: "Organic Chemistry", content: "<h2>Organic Chemistry</h2><p>Study of carbon compounds.</p>" }
+        ]},
+        { id: "r4", type: "folder", name: "Mathematics", open: false, children: [
+          { id: "n5", type: "note", name: "Calculus", content: "<h2>Calculus</h2><p>Limits and derivatives.</p>" }
+        ]}
+      ]},
+      { id: "r5", type: "folder", name: "Class 11", open: false, children: [
+        { id: "n6", type: "note", name: "Mechanics", content: "<h2>Mechanics</h2><p>Newton's laws of motion.</p>" }
+      ]}
+    ]
+  };
+  let activeId = null;
+  let modalCallback = null;
+  let modalTargetId = null;
+  let searchTerm = "";
+
+  const $ = id => document.getElementById(id);
+  const svgChev = (collapsed) => `<svg class="chev ${collapsed?'collapsed':''}" width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9.17157 7.75736L14.4142 13L9.17157 18.2426L10.5858 19.6569L17.2426 13L10.5858 6.34315L9.17157 7.75736Z" fill="currentColor"/></svg>`;
+  const svgFolder = () => `<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9.2373 3.7002C10.4169 3.7002 11.5297 4.24779 12.249 5.18262L12.4424 5.43359H18C20.0987 5.43359 21.7998 7.13472 21.7998 9.2334V16.5C21.7998 18.5987 20.0987 20.2998 18 20.2998H6C3.90132 20.2998 2.2002 18.5987 2.2002 16.5V7.5C2.2002 5.40132 3.90132 3.7002 6 3.7002H9.2373ZM6 5.5C4.89543 5.5 4 6.39543 4 7.5V16.5C4 17.6046 4.89543 18.5 6 18.5H18C19.0357 18.5 19.887 17.7128 19.9893 16.7041L20 16.5V9.2334C20 8.19775 19.2128 7.34641 18.2041 7.24414L18 7.2334H12.0479L11.9326 7.22656C11.666 7.19561 11.4205 7.05812 11.2549 6.84277L10.8223 6.28027C10.4437 5.78834 9.85808 5.5 9.2373 5.5H6Z" fill="currentColor"/></svg>`;
+  const svgFolderOpen = () => `<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18.3623 9.99976L18.209 8.48999C18.2031 8.43161 18.2004 8.37289 18.2002 8.31421C18.1988 8.31196 18.1956 8.30842 18.1904 8.30347C18.1718 8.28559 18.1302 8.26245 18.0713 8.26245H11C10.261 8.26245 9.59753 7.81016 9.32617 7.1228L8.9082 6.06421C8.88101 5.9953 8.85737 5.92501 8.83887 5.85327C8.83778 5.85099 8.833 5.84268 8.81836 5.83179C8.79454 5.81475 8.7549 5.79939 8.70605 5.80054H3.92871C3.86986 5.80054 3.82825 5.82368 3.80957 5.84155C3.80816 5.8429 3.80675 5.84428 3.80566 5.84546L4.47559 14.0955L3.62109 17.5154L5.12109 11.5154C5.34367 10.6251 6.1438 9.99977 7.06152 9.99976H18.3623ZM7.06152 11.7996C6.96976 11.7996 6.88944 11.8629 6.86719 11.9519L5.36719 17.9519C5.33598 18.078 5.43158 18.1999 5.56152 18.2H19.4385C19.5302 18.1999 19.6106 18.1376 19.6328 18.0486L21.1328 12.0486C21.1644 11.9224 21.0686 11.7996 20.9385 11.7996H7.06152ZM20.9385 9.99976C22.2396 9.99977 23.1945 11.2228 22.8789 12.4851L21.3789 18.4851C21.1563 19.3754 20.3562 19.9997 19.4385 19.9998H4.92871C4.41722 19.9998 3.92613 19.8059 3.56445 19.4597C3.20281 19.1135 3.00004 18.6436 3 18.1541L2 5.84644C2.00006 5.35711 2.20311 4.88786 2.56445 4.54175C2.92613 4.19554 3.41722 4.00073 3.92871 4.00073H8.70605C9.44482 4.00073 10.1083 4.45302 10.3796 5.14038L10.7976 6.19897C10.8248 6.26788 10.8484 6.33817 10.8669 6.40991C10.868 6.41219 10.8728 6.4205 10.8874 6.4314C10.9112 6.44843 10.9509 6.46379 10.9997 6.46264H18.0713C18.9524 6.46264 19.7249 6.97821 20.0657 7.7561L20.9385 9.99976Z" fill="currentColor"/></svg>`;
+  const svgNote = () => `<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15.4795 15.4971C15.9765 15.4971 16.3799 15.9004 16.3799 16.3975C16.3799 16.8945 15.9765 17.2978 15.4795 17.2979H8.52051C8.02345 17.2979 7.62012 16.8945 7.62012 16.3975C7.62012 15.9004 8.02345 15.4971 8.52051 15.4971H15.4795Z" fill="currentColor"/><path d="M12.3359 11.0996C12.8329 11.0997 13.2354 11.503 13.2354 12C13.2354 12.497 12.8329 12.9003 12.3359 12.9004H8.52051C8.02345 12.9004 7.62012 12.4971 7.62012 12C7.62012 11.5029 8.02345 11.0996 8.52051 11.0996H12.3359Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M13.1719 2.09961C13.9408 2.09969 14.6789 2.40555 15.2227 2.94922L19.0508 6.77734C19.5946 7.32113 19.9003 8.05911 19.9004 8.82812V18C19.9004 20.1539 18.1539 21.9004 16 21.9004H8C5.84626 21.9002 4.09961 20.1538 4.09961 18V6C4.09961 3.84621 5.84626 2.09981 8 2.09961H13.1719ZM8 3.90039C6.84037 3.90059 5.90039 4.84032 5.90039 6V18C5.90039 19.1597 6.84037 20.0994 8 20.0996H16C17.1598 20.0996 18.0996 19.1598 18.0996 18V9.90039H15C13.3985 9.90019 12.0996 8.6015 12.0996 7V3.90039H8ZM13.9004 7C13.9004 7.60739 14.3927 8.09941 15 8.09961H17.8213C17.8068 8.08333 17.7928 8.06626 17.7773 8.05078L13.9492 4.22266C13.9335 4.20696 13.9169 4.19237 13.9004 4.17773V7Z" fill="currentColor"/></svg>`;
+  const svgAdd = () => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12.0684 2.03418C12.5654 2.03421 12.9687 2.43755 12.9688 2.93457V11.0996H21.0654C21.5625 11.0996 21.9658 11.503 21.9658 12C21.9658 12.497 21.5625 12.9004 21.0654 12.9004H12.9688V21.0654C12.9687 21.5624 12.5654 21.9658 12.0684 21.9658C11.5713 21.9658 11.168 21.5625 11.168 21.0654V12.9004H2.93457C2.43751 12.9004 2.03418 12.4971 2.03418 12C2.03418 11.5029 2.43751 11.0996 2.93457 11.0996H11.168V2.93457C11.168 2.43753 11.5713 2.03418 12.0684 2.03418Z" fill="currentColor"/></svg>`;
+  const svgEdit = () => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18.0179 3.09998C18.3963 3.10003 18.7709 3.17491 19.1205 3.31971C19.4701 3.46454 19.7884 3.67614 20.056 3.94373C20.3237 4.21144 20.5362 4.52965 20.681 4.87928C20.8258 5.22887 20.8997 5.60423 20.8997 5.9828C20.8997 6.36118 20.8257 6.73591 20.681 7.08533C20.5362 7.43497 20.3237 7.75317 20.056 8.02088L17.639 10.4379L9.15756 18.9183C8.5296 19.5463 7.74274 19.992 6.8812 20.2074L4.21811 20.8734C3.91148 20.95 3.5871 20.8596 3.36362 20.6361C3.14017 20.4126 3.05063 20.0883 3.12729 19.7816L3.79233 17.1185C4.00771 16.257 4.45344 15.4701 5.08139 14.8422L15.9798 3.94373C16.5203 3.40346 17.2536 3.09998 18.0179 3.09998ZM19.0003 19.1C19.4972 19.1002 19.8997 19.5034 19.8997 20.0004C19.8995 20.4971 19.4971 20.8996 19.0003 20.8998H12.0003C11.5034 20.8998 11.1001 20.4973 11.0999 20.0004C11.0999 19.5033 11.5033 19.1 12.0003 19.1H19.0003ZM18.0179 4.89979C17.7309 4.89979 17.4553 5.01417 17.2523 5.21717L6.35385 16.1146C5.95661 16.5119 5.67469 17.01 5.53842 17.5551L5.23666 18.7631L6.44467 18.4613C6.98971 18.3251 7.48782 18.0431 7.8851 17.6459L18.7826 6.74744C18.883 6.64702 18.9635 6.52821 19.0179 6.39686C19.0723 6.26558 19.0999 6.1247 19.0999 5.9828C19.0999 5.84075 19.0723 5.69916 19.0179 5.56776C18.9635 5.43645 18.883 5.31757 18.7826 5.21717C18.6821 5.11678 18.5631 5.03716 18.432 4.9828C18.3008 4.92845 18.16 4.89983 18.0179 4.89979Z" fill="currentColor"/></svg>`;
+  const svgDel = () => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M8.10001 3C8.10001 2.50294 8.50295 2.1 9.00001 2.1H15C15.4971 2.1 15.9 2.50294 15.9 3C15.9 3.49706 15.4971 3.9 15 3.9H9.00001C8.50295 3.9 8.10001 3.49706 8.10001 3Z" fill="currentColor"/><path d="M10 15.9C9.50295 15.9 9.10001 15.4971 9.10001 15L9.10001 10C9.10001 9.50294 9.50295 9.1 10 9.1C10.4971 9.1 10.9 9.50294 10.9 10L10.9 15C10.9 15.4971 10.4971 15.9 10 15.9Z" fill="currentColor"/><path d="M13.1 15C13.1 15.4971 13.5029 15.9 14 15.9C14.4971 15.9 14.9 15.4971 14.9 15L14.9 10C14.9 9.50294 14.4971 9.1 14 9.1C13.5029 9.1 13.1 9.50294 13.1 10V15Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M2.10001 6C2.10001 5.50294 2.50295 5.1 3.00001 5.1H4.99152C4.99785 5.09993 5.00417 5.09993 5.01048 5.1H18.9895C18.9958 5.09993 19.0021 5.09993 19.0085 5.1H21C21.4971 5.1 21.9 5.50294 21.9 6C21.9 6.49706 21.4971 6.9 21 6.9H19.8281L18.8448 18.6993C18.7412 19.9432 17.7013 20.9 16.4531 20.9H7.54686C6.29865 20.9 5.25881 19.9432 5.15515 18.6993L4.17188 6.9H3.00001C2.50295 6.9 2.10001 6.49706 2.10001 6ZM5.97811 6.9L18.0219 6.9L17.0511 18.5498C17.0251 18.8608 16.7652 19.1 16.4531 19.1H7.54686C7.23481 19.1 6.97485 18.8608 6.94893 18.5498L5.97811 6.9Z" fill="currentColor"/></svg>`;
+
+  function findItem(id, list) {
+    for (const it of list) {
+      if (it.id === id) return it;
+      if (it.children) { const r = findItem(id, it.children); if (r) return r; }
+    }
+    return null;
+  }
+  function removeItem(id, list) {
+    for (let i = 0; i < list.length; i++) {
+      if (list[i].id === id) { list.splice(i, 1); return true; }
+      if (list[i].children && removeItem(id, list[i].children)) return true;
+    }
+    return false;
+  }
+  function matchesSearch(it) {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    if (it.name.toLowerCase().includes(term)) return true;
+    if (it.type === "note" && it.content && it.content.toLowerCase().includes(term)) return true;
+    if (it.children) return it.children.some(matchesSearch);
+    return false;
+  }
+  function flattenVisible(list, depth=0, out=[]) {
+    for (const it of list) {
+      if (!matchesSearch(it)) continue;
+      out.push({ ...it, depth });
+      if (it.type === "folder" && it.open && it.children) flattenVisible(it.children, depth+1, out);
+    }
+    return out;
+  }
+
+  function renderTree() {
+    const root = $("treeRoot");
+    const flat = flattenVisible(data.items);
+    root.innerHTML = flat.map(it => {
+      const isActive = it.id === activeId;
+      const indent = it.depth * 16;
+      const isFolder = it.type === "folder";
+      const hasChildren = isFolder && it.children && it.children.length > 0;
+      const icon = isFolder ? (it.open ? svgFolderOpen() : svgFolder()) : svgNote();
+      const chev = isFolder && hasChildren ? svgChev(!it.open) : '<span style="width:16px"></span>';
+      return `<div class="nts-tree-item ${isActive?'active':''}" style="padding-left:${12+indent}px" onclick="app.select('${it.id}')" oncontextmenu="app.ctx(event,'${it.id}')">
+        <span class="chev" onclick="event.stopPropagation();app.toggle('${it.id}')">${chev}</span>
+        ${icon}
+        <span class="label">${escapeHtml(it.name)}</span>
+        <span class="row-actions">
+          ${isFolder ? `<button class="nts-btn-icon" onclick="event.stopPropagation();app.addNote('${it.id}')" title="Add note">${svgAdd()}</button>` : ""}
+          <button class="nts-btn-icon" onclick="event.stopPropagation();app.rename('${it.id}')" title="Rename">${svgEdit()}</button>
+          <button class="nts-btn-icon" onclick="event.stopPropagation();app.delete('${it.id}')" title="Delete">${svgDel()}</button>
+        </span>
+      </div>`;
+    }).join("");
+  }
+  function escapeHtml(s) {
+    const d = document.createElement("div"); d.textContent = s; return d.innerHTML;
+  }
+  function updateWordCount() {
+    const txt = $("editor").innerText || "";
+    const wc = txt.trim() ? txt.trim().split(/\s+/).length : 0;
+    $("wordCount").textContent = wc + " word" + (wc !== 1 ? "s" : "");
+  }
+
+  window.app = {
+    select(id) {
+      activeId = id;
+      const it = findItem(id, data.items);
+      if (!it) return;
+      if (it.type === "folder") { this.toggle(id); return; }
+      $("emptyState").style.display = "none";
+      $("editorWrap").style.display = "flex";
+      $("noteTitle").value = it.name;
+      $("editor").innerHTML = it.content || "";
+      updateWordCount();
+      $("saveStatus").textContent = "All changes saved";
+      renderTree();
+    },
+    toggle(id) {
+      const it = findItem(id, data.items);
+      if (it && it.type === "folder") { it.open = !it.open; renderTree(); }
+    },
+    onTitleChange() {
+      if (!activeId) return;
+      const it = findItem(activeId, data.items);
+      if (it) { it.name = $("noteTitle").value; renderTree(); $("saveStatus").textContent = "Unsaved"; }
+    },
+    onEditorInput() {
+      if (!activeId) return;
+      const it = findItem(activeId, data.items);
+      if (it) { it.content = $("editor").innerHTML; updateWordCount(); $("saveStatus").textContent = "Unsaved"; }
+    },
+    format(cmd, val) {
+      document.execCommand(cmd, false, val || null);
+      $("editor").focus();
+    },
+    undo() { document.execCommand("undo"); $("editor").focus(); },
+    redo() { document.execCommand("redo"); $("editor").focus(); },
+    insertImage() {
+      const url = prompt("Image URL:");
+      if (url) { document.execCommand("insertImage", false, url); $("editor").focus(); }
+    },
+    insertLink() {
+      const url = prompt("Link URL:");
+      if (url) { document.execCommand("createLink", false, url); $("editor").focus(); }
+    },
+    clearFormat() {
+      document.execCommand("removeFormat", false, null);
+      $("editor").focus();
+    },
+    save() {
+      $("saveStatus").textContent = "Saved";
+      setTimeout(() => $("saveStatus").textContent = "All changes saved", 1200);
+    },
+    addFolder(parentId) {
+      modalTargetId = parentId || null;
+      modalCallback = (name) => {
+        const newFolder = { id: uid(), type: "folder", name, open: true, children: [] };
+        if (modalTargetId) {
+          const parent = findItem(modalTargetId, data.items);
+          if (parent) { parent.open = true; parent.children.push(newFolder); }
+        } else {
+          data.items.push(newFolder);
+        }
+        renderTree();
+      };
+      $("modalTitle").textContent = "New folder";
+      $("modalInput").value = "";
+      $("modalInput").placeholder = "Folder name";
+      $("modal").classList.add("open");
+      setTimeout(() => $("modalInput").focus(), 50);
+    },
+    addNote(parentId) {
+      const target = parentId ? findItem(parentId, data.items) : null;
+      const list = target && target.children ? target.children : data.items;
+      const parent = target || null;
+      if (parent) parent.open = true;
+      const newNote = { id: uid(), type: "note", name: "Untitled note", content: "" };
+      list.push(newNote);
+      renderTree();
+      this.select(newNote.id);
+    },
+    rename(id) {
+      const it = findItem(id, data.items);
+      if (!it) return;
+      modalTargetId = id;
+      modalCallback = (name) => { it.name = name; renderTree(); if (activeId === id) $("noteTitle").value = name; };
+      $("modalTitle").textContent = "Rename";
+      $("modalInput").value = it.name;
+      $("modalInput").placeholder = "Name";
+      $("modal").classList.add("open");
+      setTimeout(() => $("modalInput").focus(), 50);
+    },
+    delete(id) {
+      if (!confirm("Delete this item?")) return;
+      if (activeId === id) { activeId = null; $("emptyState").style.display = "flex"; $("editorWrap").style.display = "none"; }
+      removeItem(id, data.items);
+      renderTree();
+    },
+    search(term) {
+      searchTerm = term;
+      renderTree();
+    },
+    closeModal() { $("modal").classList.remove("open"); modalCallback = null; modalTargetId = null; },
+    confirmModal() {
+      const val = $("modalInput").value.trim();
+      if (!val) return;
+      if (modalCallback) modalCallback(val);
+      this.closeModal();
+    },
+    ctx(e, id) {
+      e.preventDefault();
+      const menu = $("ctxMenu");
+      const it = findItem(id, data.items);
+      const isFolder = it && it.type === "folder";
+      menu.innerHTML = `
+        <div class="nts-ctx-item" onclick="app.ctxAction('rename','${id}')">${svgEdit()} Rename</div>
+        ${isFolder ? `<div class="nts-ctx-item" onclick="app.ctxAction('addFolder','${id}')">${svgAdd()} New folder</div><div class="nts-ctx-item" onclick="app.ctxAction('addNote','${id}')">${svgNote()} New note</div>` : ""}
+        <div class="nts-ctx-item danger" onclick="app.ctxAction('delete','${id}')">${svgDel()} Delete</div>
+      `;
+      menu.style.left = e.pageX + "px";
+      menu.style.top = e.pageY + "px";
+      menu.classList.add("open");
+      document.addEventListener("click", () => menu.classList.remove("open"), { once: true });
+    },
+    ctxAction(action, id) {
+      $("ctxMenu").classList.remove("open");
+      if (action === "rename") this.rename(id);
+      else if (action === "addFolder") this.addFolder(id);
+      else if (action === "addNote") this.addNote(id);
+      else if (action === "delete") this.delete(id);
+    }
+  };
+
+  $("modalInput").addEventListener("keydown", e => { if (e.key === "Enter") app.confirmModal(); if (e.key === "Escape") app.closeModal(); });
+  document.addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); app.save(); } });
+
+  renderTree();
+})();
+</script>
+</body>
+</html>
